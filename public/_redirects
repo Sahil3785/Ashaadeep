@@ -1,0 +1,7 @@
+# Netlify / Cloudflare Pages.
+#
+# Static files are matched before these rules, so the APK and app-info.json are
+# served as themselves. Everything else falls through to index.html, which is
+# what makes client-side routing survive a refresh or a shared deep link.
+/downloads/*  /downloads/:splat  200
+/*            /index.html        200

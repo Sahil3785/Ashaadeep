@@ -1,0 +1,14 @@
+{
+  "name": "Asha Deep Faculty",
+  "version": "1.0.0",
+  "versionCode": 1,
+  "file": "/downloads/AshaDeepFaculty.apk",
+  "sizeMB": 4.2,
+  "minAndroid": "5.1",
+  "releasedOn": "2026-10-07",
+  "notes": [
+    "Sign in with your school email and password",
+    "Shares one database with the website",
+    "Works offline \u2014 changes upload when the signal returns"
+  ]
+}

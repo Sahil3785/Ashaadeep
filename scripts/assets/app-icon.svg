@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <!-- Asha Deep Adarsh app icon: the school crest's graduation cap in brass
+       on the school navy, with a soft radial lift so it does not look flat
+       on a dark launcher wallpaper. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#223056"/>
+      <stop offset="1" stop-color="#0d1223"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fcca49"/>
+      <stop offset="0.55" stop-color="#fbb420"/>
+      <stop offset="1" stop-color="#d97706"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.36" r="0.62">
+      <stop offset="0" stop-color="#fbb420" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#fbb420" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <rect width="512" height="512" fill="url(#glow)"/>
+
+  <!-- mortarboard -->
+  <path d="M256 150 L104 214 L256 278 L408 214 Z" fill="url(#gold)"/>
+  <!-- the underside catches less light -->
+  <path d="M256 278 L104 214 L256 246 L408 214 Z" fill="#b45309" opacity="0.35"/>
+
+  <!-- cap body -->
+  <path d="M152 236 v62 c0 24 46 44 104 44 s104 -20 104 -44 v-62 l-104 44 z"
+        fill="url(#gold)"/>
+
+  <!-- tassel cord and bead -->
+  <path d="M398 219 h13 v92 h-13 z" fill="#f59e0b"/>
+  <circle cx="404.5" cy="322" r="20" fill="#fcca49"/>
+</svg>

@@ -1,0 +1,240 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   STEP 1 — DESIGN TOKENS
+   Light "academic parchment" theme: warm paper ground, deep navy
+   ink for text, brass for emphasis, garden green for success.
+   ============================================================ */
+:root {
+  color-scheme: light;
+  --paper: #fbfaf7;
+  --paper-raised: #ffffff;
+  --ink: #18213c;
+  --ink-soft: #4a5578;
+  --ink-faint: #8792b0;
+  --line: rgba(24, 33, 60, 0.09);
+  --line-strong: rgba(24, 33, 60, 0.16);
+  --brass: #f59e0b;
+  --garden: #19ae6d;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+* { -webkit-tap-highlight-color: transparent; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  background-color: var(--paper);
+  color: var(--ink);
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+}
+
+/* ============================================================
+   STEP 2 — THE BACKGROUND
+   Four stacked layers, all fixed and pointer-events:none so they
+   never block clicks:
+     a) warm radial wash (brass top-left, garden bottom-right)
+     b) faint engineering grid, masked to fade at the edges
+     c) soft drifting colour blobs
+     d) a very subtle paper grain
+   ============================================================ */
+.bg-stage { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+
+.bg-wash {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(900px 620px at 8% -8%, rgba(245, 158, 11, 0.16), transparent 62%),
+    radial-gradient(760px 560px at 98% 4%, rgba(99, 132, 214, 0.16), transparent 60%),
+    radial-gradient(900px 700px at 50% 108%, rgba(25, 174, 109, 0.14), transparent 62%),
+    linear-gradient(175deg, #fffdf8 0%, #fbfaf7 45%, #f5f7fb 100%);
+}
+
+.bg-grid {
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(to right, rgba(24, 33, 60, 0.055) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(24, 33, 60, 0.055) 1px, transparent 1px);
+  background-size: 46px 46px;
+  /* fade the grid out toward the edges so it reads as texture, not a table */
+  -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 35%, #000 20%, transparent 78%);
+          mask-image: radial-gradient(ellipse 80% 70% at 50% 35%, #000 20%, transparent 78%);
+}
+
+.bg-blob { position: absolute; border-radius: 50%; filter: blur(72px); opacity: 0.5; }
+.bg-blob-1 { width: 30rem; height: 30rem; top: -7rem; left: -9rem; background: radial-gradient(circle, rgba(251, 180, 32, 0.52), transparent 68%); animation: float-slow 17s ease-in-out infinite; }
+.bg-blob-2 { width: 26rem; height: 26rem; top: 24%; right: -8rem; background: radial-gradient(circle, rgba(117, 223, 172, 0.46), transparent 68%); animation: float-slow 21s ease-in-out infinite reverse; }
+.bg-blob-3 { width: 34rem; height: 34rem; bottom: -12rem; left: 28%; background: radial-gradient(circle, rgba(159, 176, 212, 0.44), transparent 70%); animation: float-slow 25s ease-in-out infinite; }
+
+.bg-grain {
+  position: absolute; inset: 0; opacity: 0.4; mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='.3'/%3E%3C/svg%3E");
+}
+
+/* ============================================================
+   STEP 3 — SURFACES
+   ============================================================ */
+@layer components {
+  .card {
+    @apply bg-white/85 backdrop-blur-xl border border-ink-900/[.08] rounded-3xl shadow-soft;
+  }
+  .card-lift {
+    @apply card transition-all duration-300;
+    transition-timing-function: var(--ease);
+  }
+  .card-lift:hover {
+    @apply shadow-float border-brass-300/70 -translate-y-1 bg-white/95;
+  }
+  .panel {
+    @apply bg-white/92 backdrop-blur-2xl border border-ink-900/[.07] rounded-4xl shadow-lift;
+  }
+  /* Brass-accented hero/feature panel with a top light sheen */
+  .panel-brass {
+    @apply rounded-4xl border border-brass-300/60 shadow-float relative overflow-hidden;
+    background:
+      radial-gradient(120% 90% at 50% -20%, rgba(253, 224, 136, 0.42), transparent 60%),
+      linear-gradient(170deg, #fffdf6 0%, #ffffff 58%, #fbfaf7 100%);
+  }
+
+  .field {
+    @apply w-full rounded-2xl border border-ink-900/[.13] bg-white/90 px-3.5 py-2.5
+           text-sm text-ink-900 placeholder:text-ink-faint shadow-inset
+           outline-none transition-all duration-200;
+  }
+  .field:focus {
+    @apply border-brass-400 bg-white ring-4 ring-brass-400/18;
+  }
+  .field:disabled { @apply bg-ink-50 text-ink-faint cursor-not-allowed; }
+  .field-label { @apply block text-xs font-semibold text-ink-soft mb-1.5; }
+  .field-error { @apply border-rose-400 ring-4 ring-rose-400/15; }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3
+           text-sm font-bold transition-all duration-200 select-none
+           disabled:opacity-55 disabled:cursor-not-allowed active:scale-[.97];
+    transition-timing-function: var(--ease);
+  }
+  .btn-primary { @apply btn bg-gradient-to-br from-brass-400 to-brass-500 text-ink-950 shadow-brass hover:from-brass-300 hover:to-brass-400 hover:-translate-y-0.5; }
+  .btn-ink     { @apply btn bg-ink-900 text-white shadow-lift hover:bg-ink-800 hover:-translate-y-0.5; }
+  .btn-garden  { @apply btn bg-gradient-to-br from-garden-400 to-garden-600 text-white shadow-lift hover:-translate-y-0.5; }
+  .btn-ghost   { @apply btn bg-white/70 text-ink-700 border border-ink-900/10 hover:bg-white hover:border-brass-300; }
+  .btn-danger  { @apply btn bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100; }
+
+  .chip { @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wider; }
+  .chip-brass  { @apply chip bg-brass-100 text-brass-800 border border-brass-300/70; }
+  .chip-garden { @apply chip bg-garden-100 text-garden-800 border border-garden-300/70; }
+  .chip-ink    { @apply chip bg-ink-100 text-ink-700 border border-ink-200; }
+  .chip-rose   { @apply chip bg-rose-50 text-rose-700 border border-rose-200; }
+
+  /* Section heading block used across every page */
+  .eyebrow { @apply inline-flex items-center gap-2 rounded-full bg-white/80 border border-brass-300/60 px-3.5 py-1.5 text-[11px] font-extrabold uppercase tracking-[.14em] text-brass-700 shadow-soft; }
+  .h-section { @apply font-display text-3xl sm:text-4xl font-extrabold tracking-tight text-ink-950; }
+  .h-page { @apply font-display text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-ink-950; }
+  .lead { @apply text-sm sm:text-base text-ink-soft leading-relaxed; }
+
+  /* Accessible focus ring applied globally via :focus-visible below */
+  .focusable:focus-visible { @apply outline-none ring-4 ring-brass-400/40 ring-offset-2 ring-offset-white; }
+}
+
+/* Global keyboard focus — every interactive element gets a visible ring */
+a:focus-visible, button:focus-visible, input:focus-visible,
+select:focus-visible, textarea:focus-visible, [tabindex]:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.38);
+  border-radius: 0.9rem;
+}
+
+/* ============================================================
+   STEP 4 — SKELETON LOADER
+   A base block plus a sweeping highlight. Used by every page's
+   loading state so the shapes match the real content.
+   ============================================================ */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(90deg, #eef0f5 0%, #e6e9f0 50%, #eef0f5 100%);
+  border-radius: 0.75rem;
+}
+.skeleton::after {
+  content: '';
+  position: absolute; inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.75), transparent);
+  animation: shimmer 1.6s infinite;
+}
+
+/* ============================================================
+   STEP 5 — SCROLL REVEAL
+   Elements start shifted/transparent and get .is-visible from an
+   IntersectionObserver hook.
+   ============================================================ */
+.reveal { opacity: 0; transform: translateY(26px); transition: opacity .7s var(--ease), transform .7s var(--ease); }
+.reveal.is-visible { opacity: 1; transform: none; }
+.reveal-left  { opacity: 0; transform: translateX(-30px); transition: opacity .7s var(--ease), transform .7s var(--ease); }
+.reveal-left.is-visible { opacity: 1; transform: none; }
+.reveal-right { opacity: 0; transform: translateX(30px); transition: opacity .7s var(--ease), transform .7s var(--ease); }
+.reveal-right.is-visible { opacity: 1; transform: none; }
+.reveal-zoom  { opacity: 0; transform: scale(.94); transition: opacity .7s var(--ease), transform .7s var(--ease); }
+.reveal-zoom.is-visible { opacity: 1; transform: none; }
+
+/* ============================================================
+   STEP 6 — DOCUMENTS (marksheet / receipt)
+   These stay on white paper regardless of theme, and are the only
+   thing that prints.
+   ============================================================ */
+.document {
+  background: #ffffff;
+  color: #0f172a;
+  box-shadow: 0 10px 20px rgba(13, 18, 35, .08), 0 30px 60px -20px rgba(13, 18, 35, .18);
+}
+.doc-watermark::before {
+  content: '';
+  position: absolute; inset: 0; pointer-events: none;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Ctext x='150' y='150' font-family='Georgia' font-size='26' fill='%230d1223' fill-opacity='.035' text-anchor='middle' transform='rotate(-32 150 150)'%3EASHA DEEP ADARSH%3C/text%3E%3C/svg%3E");
+}
+
+@media print {
+  .no-print, .bg-stage { display: none !important; }
+  body { background: #fff !important; }
+  .print-area { position: static !important; box-shadow: none !important; border-radius: 0 !important; }
+  @page { size: A4; margin: 12mm; }
+}
+
+/* ============================================================
+   STEP 7 — SCROLLBAR & MISC
+   ============================================================ */
+::-webkit-scrollbar { width: 11px; height: 11px; }
+::-webkit-scrollbar-track { background: #f1f2f6; }
+::-webkit-scrollbar-thumb { background: #c3cad9; border: 3px solid #f1f2f6; border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: var(--brass); }
+::selection { background: #fde088; color: #18213c; }
+
+/* Scroll locking is applied inline on <html> by the useScrollLock hook, because
+   <html> is the scrolling element here — overflow:hidden on <body> alone does
+   not stop the page moving. This class is kept only as a defensive fallback. */
+html.scroll-locked, body.scroll-locked { overflow: hidden; }
+
+/* Hide number input spinners for cleaner mark-entry fields */
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+input[type=number] { -moz-appearance: textfield; }
+
+/* ============================================================
+   STEP 8 — REDUCED MOTION
+   Honour the OS setting: kill decorative motion, keep opacity.
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+  .reveal, .reveal-left, .reveal-right, .reveal-zoom { opacity: 1 !important; transform: none !important; }
+  .bg-blob { animation: none !important; }
+}

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Adaptive icon foreground. The 108dp canvas has a 72dp safe zone in the
+     middle; the cap is drawn inside that so no launcher mask crops it. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- mortarboard -->
+    <path
+        android:fillColor="#FBB420"
+        android:pathData="M54,32 L28,43 L54,54 L80,43 Z" />
+
+    <!-- cap body -->
+    <path
+        android:fillColor="#FBB420"
+        android:pathData="M37.5,47.5 L37.5,58.5 C37.5,62.6 44.9,66 54,66 C63.1,66 70.5,62.6 70.5,58.5 L70.5,47.5 L54,54.5 Z" />
+
+    <!-- tassel -->
+    <path
+        android:fillColor="#F59E0B"
+        android:pathData="M79,44.5 L81,44.5 L81,60 L79,60 Z" />
+    <path
+        android:fillColor="#F59E0B"
+        android:pathData="M80,59 m-3.5,0 a3.5,3.5 0 1,0 7,0 a3.5,3.5 0 1,0 -7,0" />
+</vector>

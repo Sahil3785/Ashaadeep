@@ -1,0 +1,189 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Fonts bundled into the APK so the app looks right with no network.
+   Only the latin subset is included — the UI is English. */
+
+/* latin */
+@font-face {
+  font-family: 'Outfit';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url(./fonts/QGYvz_MVcBeNP4NJtEtq.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* latin */
+@font-face {
+  font-family: 'Outfit';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url(./fonts/QGYvz_MVcBeNP4NJtEtq.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* latin */
+@font-face {
+  font-family: 'Outfit';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url(./fonts/QGYvz_MVcBeNP4NJtEtq.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* latin */
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(./fonts/LDIoaomQNQcsA88c7O9yZ4KMCoOg4Ko20yw.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* latin */
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url(./fonts/LDIoaomQNQcsA88c7O9yZ4KMCoOg4Ko20yw.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* latin */
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url(./fonts/LDIoaomQNQcsA88c7O9yZ4KMCoOg4Ko20yw.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* latin */
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url(./fonts/LDIoaomQNQcsA88c7O9yZ4KMCoOg4Ko20yw.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* latin */
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url(./fonts/LDIoaomQNQcsA88c7O9yZ4KMCoOg4Ko20yw.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* ============================================================
+   Faculty app styles.
+
+   Separate from the website's index.css: this build has no
+   decorative background, no scroll reveals and no print rules —
+   it is a utility app that must start fast and feel native.
+   ============================================================ */
+:root {
+  color-scheme: light;
+  --ink: #18213c;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+* { -webkit-tap-highlight-color: transparent; }
+
+html, body, #root {
+  min-height: 100%;
+  background: #faf7f2;
+}
+
+body {
+  margin: 0;
+  color: var(--ink);
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior-y: none;      /* no rubber-band / pull-to-refresh */
+  -webkit-user-select: none;         /* app chrome should not feel like a web page */
+  user-select: none;
+}
+
+/* Text the user may legitimately want to copy stays selectable. */
+input, textarea, select, [data-selectable] {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* Android zooms any input under 16px on focus, which breaks the layout. */
+input, select, textarea { font-size: 16px; }
+
+/* ============================================================
+   Keyboard handling — hide the bottom bar while typing so it
+   never covers the field in focus.
+   ============================================================ */
+.app-bottom-nav { transition: transform .22s var(--ease); }
+body.keyboard-open .app-bottom-nav { transform: translateY(110%); }
+
+/* ============================================================
+   Animations — short and purposeful, nothing decorative.
+   ============================================================ */
+@keyframes screen-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+.animate-screen-in { animation: screen-in .26s var(--ease) both; }
+
+@keyframes sheet-up {
+  from { transform: translateY(100%); }
+  to   { transform: none; }
+}
+.animate-sheet-up { animation: sheet-up .3s var(--ease) both; }
+
+@keyframes fade-in { from { opacity: 0 } to { opacity: 1 } }
+.animate-fade-in { animation: fade-in .2s ease both; }
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0) }
+  20% { transform: translateX(-8px) }
+  40% { transform: translateX(8px) }
+  60% { transform: translateX(-5px) }
+  80% { transform: translateX(5px) }
+}
+.animate-shake { animation: shake .5s ease; }
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(16px) scale(.97); }
+  to   { opacity: 1; transform: none; }
+}
+.animate-toast-in { animation: toast-in .3s var(--ease) both; }
+
+@keyframes bar-grow { from { transform: scaleX(0) } to { transform: scaleX(1) } }
+
+/* Toasts sit above the bottom navigation rather than behind it. */
+[role="region"][aria-label="Notifications"] {
+  bottom: calc(5.5rem + env(safe-area-inset-bottom)) !important;
+  right: 1rem !important;
+  left: 1rem !important;
+  width: auto !important;
+}
+
+/* Native-feeling momentum scrolling inside sheets. */
+.overflow-y-auto { -webkit-overflow-scrolling: touch; }
+
+/* Status-bar coloured strip behind the title bar on devices that
+   draw the web view edge to edge. */
+header.sticky { padding-top: max(0.75rem, env(safe-area-inset-top)); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    transition-duration: .01ms !important;
+  }
+}

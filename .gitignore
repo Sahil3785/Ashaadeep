@@ -1,0 +1,41 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+dist-app/
+
+# Android build artefacts — the project itself is committed, its outputs are not
+android/build/
+android/app/build/
+android/.gradle/
+android/local.properties
+android/app/src/main/assets/public/
+android/captures/
+*.iml
+.idea/
+
+# Built APKs — rebuild them with `npm run apk` rather than committing binaries.
+# The one exception is the copy the website serves: it has to be in the repo,
+# or the host builds a site whose download link 404s.
+*.apk
+!public/downloads/*.apk
+
+# Signing material — never commit these
+*.keystore
+*.jks
+keystore.properties
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment — real keys never get committed.
+# The .env* glob is deliberately broad: a stray .env.bak or .env.old holds the
+# same credentials as .env and must never reach a repository either.
+.env
+.env.*
+!.env.example

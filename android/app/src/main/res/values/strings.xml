@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Asha Deep Faculty</string>
+    <string name="title_activity_main">Asha Deep Faculty</string>
+    <string name="package_name">in.ashadeepadarsh.faculty</string>
+    <string name="custom_url_scheme">in.ashadeepadarsh.faculty</string>
+</resources>

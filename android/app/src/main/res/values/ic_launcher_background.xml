@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- School navy, so the icon reads as the crest on a dark tile. -->
+    <color name="ic_launcher_background">#18213C</color>
+</resources>
