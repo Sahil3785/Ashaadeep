@@ -12,6 +12,10 @@
   Referrer-Policy: strict-origin-when-cross-origin
   # This site needs none of these.
   Permissions-Policy: geolocation=(), microphone=(), camera=(), payment=()
+  # Browsers must always use HTTPS for this site.
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  # Only load code from this site; data only from Supabase. Blocks injected scripts.
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests
 
 # Hashed assets never change under the same name, so cache them hard.
 /assets/*

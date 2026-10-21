@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { PlusCircle, Save, BookOpen, Trash2 } from 'lucide-react';
-import { CLASS_LIST, EXAM_TERMS, SUBJECT_CODES } from '../../data/school';
+import { CLASS_LIST, EXAM_TERMS, SUBJECT_CODES, MAX_PRESETS } from '../../data/school';
 import { summarise } from '../../data/syllabus';
 import { useSchool } from '../../context/SchoolContext';
 import { Screen, Card, Field, Btn, Pill, inputCls, selectCls, Empty } from '../components/Chrome';
@@ -134,6 +134,9 @@ export default function Marks() {
             </Field>
           </div>
 
+          <QuickMax values={MAX_PRESETS.theory} current={f.theoryMax} label="Theory maximum"
+                    onPick={v => set('theoryMax')({ target: { value: v } })} />
+
           <p className="text-[11px] font-extrabold uppercase tracking-[.14em] text-ink-faint pt-1">Internal / practical</p>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Maximum" error={errors.practMax}>
@@ -146,6 +149,9 @@ export default function Marks() {
                      className={`${inputCls(errors.practObt)} font-bold`} />
             </Field>
           </div>
+
+          <QuickMax values={MAX_PRESETS.internal} current={f.practMax} label="Internal maximum"
+                    onPick={v => set('practMax')({ target: { value: v } })} />
 
           {showPreview && (
             <div className="rounded-2xl bg-ink-50 border border-ink-900/8 p-3.5">
@@ -223,5 +229,28 @@ export default function Marks() {
         </>
       )}
     </Screen>
+  );
+}
+
+/* One-tap maximum marks, sized for a thumb, so "out of 80" is a single tap. */
+function QuickMax({ values, current, onPick, label }) {
+  return (
+    <div className="-mt-1" role="group" aria-label={`Quick ${label}`}>
+      <p className="text-[10.5px] font-bold text-ink-faint mb-1.5">Quick max</p>
+      <div className="flex flex-wrap gap-1.5">
+        {values.map(v => {
+          const on = String(current) === String(v);
+          return (
+            <button key={v} type="button" aria-pressed={on}
+                    onClick={() => { tap(); onPick(String(v)); }}
+                    className={`min-w-[2.75rem] h-9 px-2.5 rounded-xl text-[12.5px] font-extrabold font-mono border transition-colors active:scale-95 ${
+                      on ? 'bg-ink-950 text-brass-300 border-ink-950'
+                         : 'bg-white text-ink-700 border-ink-900/15 active:bg-brass-50'}`}>
+              {v}
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 }

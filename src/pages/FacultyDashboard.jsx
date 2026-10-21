@@ -4,7 +4,7 @@ import {
   CheckCircle2, AlertCircle, TrendingUp, IndianRupee, FileSpreadsheet, RotateCcw,
   Filter, Download, BookOpen, Pencil, X, Save, ClipboardList,
 } from 'lucide-react';
-import { SCHOOL, CLASS_LIST, EXAM_TERMS, SUBJECT_CODES } from '../data/school';
+import { SCHOOL, CLASS_LIST, EXAM_TERMS, SUBJECT_CODES, MAX_PRESETS } from '../data/school';
 import { summarise } from '../data/syllabus';
 import { useSchool } from '../context/SchoolContext';
 import { PageHeader, Reveal, Badge, Tabs, StatTile, Modal, ProgressBar } from '../components/UI';
@@ -298,6 +298,8 @@ function MarksEntry() {
                 <input id="tmax" type="number" min="0" value={f.theoryMax} onChange={set('theoryMax')}
                        className={`field ${errors.theoryMax ? 'field-error' : ''}`} />
                 {errors.theoryMax && <Err>{errors.theoryMax}</Err>}
+                <QuickMax values={MAX_PRESETS.theory} current={f.theoryMax} label="Theory maximum"
+                          onPick={v => set('theoryMax')({ target: { value: v } })} />
               </div>
 
               <div>
@@ -313,6 +315,8 @@ function MarksEntry() {
                 <input id="pmax" type="number" min="0" value={f.practMax} onChange={set('practMax')}
                        className={`field ${errors.practMax ? 'field-error' : ''}`} />
                 {errors.practMax && <Err>{errors.practMax}</Err>}
+                <QuickMax values={MAX_PRESETS.internal} current={f.practMax} label="Internal maximum"
+                          onPick={v => set('practMax')({ target: { value: v } })} />
               </div>
 
               <div>
@@ -856,6 +860,25 @@ function EditStudentModal({ student, onClose, onSave }) {
         </div>
       </form>
     </Modal>
+  );
+}
+
+/* One-tap maximum marks under a Max field, so "out of 80" is a single tap. */
+function QuickMax({ values, current, onPick, label }) {
+  return (
+    <div className="flex flex-wrap gap-1.5 mt-2" role="group" aria-label={`Quick ${label}`}>
+      {values.map(v => {
+        const on = String(current) === String(v);
+        return (
+          <button key={v} type="button" onClick={() => onPick(String(v))} aria-pressed={on}
+                  className={`min-w-[2.25rem] px-2 py-1 rounded-lg text-[11px] font-bold font-mono border transition-colors ${
+                    on ? 'bg-ink-950 text-brass-300 border-ink-950'
+                       : 'bg-white text-ink-700 border-ink-900/15 hover:border-brass-400 hover:bg-brass-50'}`}>
+            {v}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 

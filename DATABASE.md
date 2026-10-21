@@ -59,6 +59,7 @@ says Success, then move to the next.
 | 1 | `supabase/migrations/001_schema.sql` | Tables, indexes, constraints, triggers |
 | 2 | `supabase/migrations/002_security.sql` | Row-level security and the safe lookup functions |
 | 3 | `supabase/migrations/003_seed.sql` | The ten demo students — **skip this** if you are loading the real register |
+| 4 | `supabase/migrations/004_security_hardening.sql` | Closes self-sign-up, self-reactivation, free fee clearing and result guessing |
 
 All three are safe to run more than once.
 
@@ -106,7 +107,19 @@ Add user**.
 - Enter the teacher's email and a starting password.
 - Tick **Auto Confirm User**, otherwise they must click a confirmation email.
 
-A `profiles` row is created automatically with the role `teacher`. To make
+A `profiles` row is created automatically with the role `teacher`, but it is
+**switched off** until you activate it — so a stranger who signs up on their own
+gets no access. Activate each teacher you create:
+
+```sql
+update public.profiles set is_active = true
+ where id = (select id from auth.users where email = 'pooja@ashadeepadarsh.in');
+```
+
+Also turn public sign-ups off: **Authentication → Sign In / Providers → Email →
+untick "Allow new users to sign up"**. Accounts are only ever made by the school.
+
+To make
 someone an administrator (who may also delete student records), run this in the
 SQL editor:
 
@@ -149,13 +162,17 @@ The important detail is the result lookup. A parent checking their child's
 marks must not be able to download every child's name, father's name and phone
 number. So the public has **no read access to the `students` table at all**.
 Instead, `get_student_result(roll, name, exam)` runs inside the database, needs
-both the roll number *and* the start of the name, and returns exactly one
+both the roll number *and* the student's full first name, and returns exactly one
 marksheet. There is no way to list or enumerate students through it.
 
 Two more safeguards worth knowing:
 
-- `settle_fee()` refuses to clear a student's dues unless a matching payment
-  row actually exists, so it cannot be called on its own to wipe a fee.
+- An online payment is **recorded** in the ledger but does not clear the
+  student's dues by itself — there is no bank callback proving it happened.
+  Staff check the payment against the bank statement and mark the student PAID
+  from the dashboard or the app. `settle_fee()` is staff-only.
+- Only an administrator can change anyone's role or active status, including
+  their own.
 - Obtained marks can never exceed the maximum — enforced by a database
   constraint, not just the form, so a malformed request cannot write a
   nonsense marksheet.

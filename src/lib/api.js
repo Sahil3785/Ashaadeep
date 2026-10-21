@@ -28,6 +28,16 @@ const writeCache = (key, value) => {
   try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* full */ }
 };
 
+/* The register and marks are cached for offline use. They hold children's
+   names, parents' names and phone numbers, so they must not outlive the
+   session on a shared computer. */
+export const clearStaffCache = () => {
+  try {
+    localStorage.removeItem(CACHE.students);
+    localStorage.removeItem(CACHE.marks);
+  } catch { /* storage blocked */ }
+};
+
 /* Rows come back from Postgres with database column names; the UI was written
    against the original local shape. These two keep that contract. */
 const fromStudentRow = (r) => ({
@@ -72,10 +82,20 @@ export const auth = {
       password,
     });
     if (error) throw new Error(friendlyError(error));
+
+    // A correct password is not enough: new accounts start inactive and a
+    // departed teacher is deactivated, so refuse those here with a clear reason
+    // instead of leaving them on a dashboard the database will not fill.
+    const profile = await auth.getProfile(data.user?.id);
+    if (!profile?.is_active) {
+      await supabase.auth.signOut();
+      throw new Error('Your account is not active yet. Ask the principal to activate it.');
+    }
     return data;
   },
 
   async signOut() {
+    clearStaffCache();
     if (!isConfigured) return;
     await supabase.auth.signOut();
   },
@@ -142,13 +162,9 @@ export const publicApi = {
     });
     if (error) throw new Error(friendlyError(error));
 
-    // Clear the student's dues, if we can identify them.
-    const { data } = await supabase.rpc('settle_fee', {
-      p_roll: String(payment.roll).trim(),
-      p_class: String(payment.cls).trim(),
-      p_txn: payment.txn,
-    });
-    return data || { ok: true };
+    // Dues are not cleared here: with no gateway confirming the payment, the
+    // office verifies it against the bank statement and marks the student PAID.
+    return { ok: true };
   },
 
   async submitEnquiry(e) {

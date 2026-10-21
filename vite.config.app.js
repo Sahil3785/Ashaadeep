@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { fileURLToPath } from 'node:url';
 
 /* ============================================================
    Build config for the Android faculty app.
@@ -18,6 +19,12 @@ export default defineConfig({
   // Relative asset URLs: the Android web view serves from a local
   // origin where absolute "/assets/..." paths do not resolve.
   base: './',
+
+  // The dev server resolves the entry's "../src/..." against root as
+  // "/src/...", which does not exist inside appshell/. Point it back.
+  resolve: {
+    alias: [{ find: /^\/src\//, replacement: fileURLToPath(new URL('./src/', import.meta.url)) }],
+  },
 
   server: { port: 3100, open: true },
 

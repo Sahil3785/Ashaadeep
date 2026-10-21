@@ -169,9 +169,8 @@ export default function Results() {
           {result?.status === 'not_found' && (
             <Reveal>
               <EmptyState icon={AlertCircle} title="No matching student record">
-                Nothing in the register matches roll number <strong>{form.roll}</strong> with a name starting
-                "{form.name}". Check the spelling against the school diary — the name must match from the first
-                letter. If it still fails, call the office on {SCHOOL.phone}.
+                Nothing in the register matches roll number <strong>{form.roll}</strong> with the first name
+                "{form.name}". Check the spelling against the school diary — type the student's full first name. If it still fails, call the office on {SCHOOL.phone}.
               </EmptyState>
             </Reveal>
           )}
@@ -543,9 +542,15 @@ async function lookupLocal(roll, name, exam, students, marks) {
   // A short pause so the loading state is visible rather than flickering.
   await new Promise(r => setTimeout(r, 650));
 
-  const student = students.find(s =>
-    String(s.roll_no) === roll && (s.name || '').toUpperCase().startsWith(name)
-  );
+  // Same rule as get_student_result(): the whole first name must match, so a
+  // single letter cannot be used to walk through the register.
+  const typed = name.toUpperCase().replace(/\s+/g, ' ').trim();
+  const student = typed.length >= 2 && students.find(s => {
+    const full = (s.name || '').toUpperCase();
+    return String(s.roll_no) === roll &&
+      full.split(' ')[0] === typed.split(' ')[0] &&
+      full.startsWith(typed);
+  });
   if (!student) return { status: 'not_found' };
   if ((student.fee_status || '').toUpperCase() === 'PENDING') {
     return { status: 'pending_fee', student };
