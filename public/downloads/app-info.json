@@ -1,14 +1,15 @@
 {
   "name": "Asha Deep Faculty",
-  "version": "1.0.0",
-  "versionCode": 1,
+  "version": "1.0.1",
+  "versionCode": 2,
   "file": "/downloads/AshaDeepFaculty.apk",
-  "sizeMB": 4.2,
+  "sizeMB": 4.0,
   "minAndroid": "5.1",
-  "releasedOn": "2026-10-07",
+  "releasedOn": "2026-10-21",
   "notes": [
-    "Sign in with your school email and password",
-    "Shares one database with the website",
-    "Works offline \u2014 changes upload when the signal returns"
+    "Sign in with your own school email and password — the same as the website",
+    "New teachers can request access from the sign-in screen; the principal approves it",
+    "Principal: approve or remove staff and see the full activity log under More → Admin",
+    "Connected to the school database; works offline and uploads when the signal returns"
   ]
 }

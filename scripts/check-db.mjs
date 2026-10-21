@@ -96,7 +96,7 @@ for (const t of ['students', 'marks', 'profiles', 'fee_payments', 'enquiries']) 
   const { error } = await db.from(t).select('id').limit(1);
   // "relation does not exist" means migration 001 was not run.
   if (error && /does not exist|schema cache/i.test(error.message)) {
-    bad(`public.${t} does not exist`, 'Run supabase/migrations/001_schema.sql in the SQL editor.');
+    bad(`public.${t} does not exist`, 'Run supabase/setup_complete.sql in the SQL editor.');
   } else {
     ok(`public.${t} exists`);
   }
@@ -114,13 +114,13 @@ console.log(`\n${C.cyan}4. Security rules${C.reset}`);
     ok('Students are NOT readable by the public', 'returned no rows to the anon key');
   } else {
     bad(`STUDENT DATA IS PUBLIC — ${data?.length} rows came back to the anonymous key`,
-        'Run supabase/migrations/002_security.sql. Until you do, anyone can download\n      every student\'s name, parents\' names and phone number from the website.');
+        'Run supabase/setup_complete.sql. Until you do, anyone can download\n      every student\'s name, parents\' names and phone number from the website.');
   }
 }
 {
   const { data, error } = await db.from('marks').select('id').limit(5);
   if (error || !data?.length) ok('Marks are NOT readable by the public');
-  else bad(`MARKS ARE PUBLIC — ${data.length} rows returned`, 'Run 002_security.sql.');
+  else bad(`MARKS ARE PUBLIC — ${data.length} rows returned`, 'Run supabase/setup_complete.sql.');
 }
 
 // ---------- 5. The safe result lookup ----------
@@ -130,7 +130,7 @@ console.log(`\n${C.cyan}5. Result lookup function${C.reset}`);
     p_roll: '__none__', p_name: '__none__', p_exam: 'UT-1',
   });
   if (error && /function .* does not exist|not find/i.test(error.message)) {
-    bad('get_student_result() is missing', 'Run supabase/migrations/002_security.sql.');
+    bad('get_student_result() is missing', 'Run supabase/setup_complete.sql.');
   } else if (error) {
     bad('get_student_result() errored', error.message);
   } else if (data?.status === 'not_found') {

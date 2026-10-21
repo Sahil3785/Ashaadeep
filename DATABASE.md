@@ -50,9 +50,15 @@ would be fighting its document model every time you wanted a class-wise report.
 
 ## 3. Create the tables
 
-In the Supabase dashboard open **SQL Editor → New query**, then run these three
-files from this repository **in order**. Paste each one, press Run, confirm it
-says Success, then move to the next.
+**New project — the easy way:** open **SQL Editor → New query**, paste the whole of
+`supabase/setup_complete.sql`, and press Run. That one file creates every table,
+security rule and function, with all the security fixes included. Then follow the
+"FIRST ADMIN" steps written at the bottom of that file.
+
+Optionally run `supabase/migrations/003_seed.sql` afterwards for ten demo students.
+
+**Upgrading an older project instead:** run these files **in order**. Paste each
+one, press Run, confirm it says Success, then move to the next.
 
 | Order | File | What it does |
 |---|---|---|
@@ -60,8 +66,9 @@ says Success, then move to the next.
 | 2 | `supabase/migrations/002_security.sql` | Row-level security and the safe lookup functions |
 | 3 | `supabase/migrations/003_seed.sql` | The ten demo students — **skip this** if you are loading the real register |
 | 4 | `supabase/migrations/004_security_hardening.sql` | Closes self-sign-up, self-reactivation, free fee clearing and result guessing |
+| 5 | `supabase/migrations/005_admin_and_activity.sql` | Admin panel functions and the activity log |
 
-All three are safe to run more than once.
+All of them are safe to run more than once.
 
 ---
 
@@ -116,8 +123,13 @@ update public.profiles set is_active = true
  where id = (select id from auth.users where email = 'pooja@ashadeepadarsh.in');
 ```
 
-Also turn public sign-ups off: **Authentication → Sign In / Providers → Email →
-untick "Allow new users to sign up"**. Accounts are only ever made by the school.
+**Easier, once one admin exists:** keep **Authentication → Sign In / Providers →
+Email → "Allow new users to sign up"** switched **on**. New teachers then tap
+*Request access* on the sign-in screen (website or app), and the principal approves
+them in **Dashboard → Staff** (or **More → Admin** in the app). A request can see
+nothing until it is approved, so leaving sign-ups on is safe. The same screen
+deactivates, promotes, or deletes accounts, and **Dashboard → Activity log** shows
+who changed what and when.
 
 To make
 someone an administrator (who may also delete student records), run this in the

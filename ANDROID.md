@@ -43,6 +43,12 @@ were needed and your system Java is untouched:
 
 ### Every build
 
+The APK needs the school database keys **before** you build: create `.env` in
+the project root from `.env.example` (same values as the website). The keys are
+baked in at build time, and the build stops with an error if they are missing —
+otherwise the APK would fall back to the shared demo PIN instead of each
+teacher's own email and password.
+
 ```bash
 cd ~/Desktop/ashaadeep
 source ./android-env.sh      # sets JAVA_HOME, ANDROID_HOME and PATH

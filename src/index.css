@@ -27,6 +27,12 @@ html { scroll-behavior: smooth; }
 
 body {
   margin: 0;
+  /* Elements waiting to slide in from the side (.reveal-right) sit just past
+     the right edge, which widened the page and let it wobble sideways on
+     phones. Clip horizontal overflow; `clip` (unlike `hidden`) keeps the
+     sticky header working. */
+  overflow-x: hidden;
+  overflow-x: clip;
   background-color: var(--paper);
   color: var(--ink);
   font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;

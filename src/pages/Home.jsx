@@ -6,7 +6,8 @@ import {
   Quote, CalendarDays, ChevronRight, Phone, Star, MapPin, Clock, Images, Play,
   Smartphone, Download, WifiOff, ShieldCheck,
 } from 'lucide-react';
-import { SCHOOL, STATS, WHY_US, GALLERY, EVENTS, ACHIEVEMENTS, HOUSES } from '../data/school';
+import { SCHOOL, STATS, WHY_US, GALLERY, ACHIEVEMENTS, HOUSES } from '../data/school';
+import { usePublished } from '../hooks/usePublished';
 import { Reveal, SectionHeader, StatTile, Badge, IconTile, toneFor } from '../components/UI';
 import { SkStats, SkCardGrid } from '../components/Loaders';
 import { useDelay } from '../hooks';
@@ -375,7 +376,8 @@ function GalleryPreview({ ready }) {
    UpcomingEvents — the next four dated entries from the calendar.
    ============================================================ */
 function UpcomingEvents() {
-  const upcoming = EVENTS.slice(0, 4);
+  const { events } = usePublished();
+  const upcoming = events.slice(0, 4);
 
   return (
     <section className="max-w-7xl mx-auto px-4 py-14">

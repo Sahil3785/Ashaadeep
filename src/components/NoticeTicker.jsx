@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Megaphone, Pause, Play, ChevronRight } from 'lucide-react';
-import { NOTICES } from '../data/school';
+import { usePublished } from '../hooks/usePublished';
 
 /* ============================================================
    NoticeTicker — the scrolling circular strip under the header.
@@ -12,7 +12,8 @@ import { NOTICES } from '../data/school';
    ============================================================ */
 export default function NoticeTicker() {
   const [paused, setPaused] = useState(false);
-  const items = NOTICES.slice(0, 5);
+  const { notices } = usePublished();
+  const items = notices.slice(0, 5);
 
   // w-full is required, not cosmetic: as a flex item in the column layout this
   // wrapper would otherwise grow to the marquee's min-content width (~3600px)

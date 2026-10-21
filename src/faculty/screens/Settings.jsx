@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import {
   Settings as Cog, LogOut, RotateCcw, Phone, Mail, MapPin, CheckCircle2,
-  ShieldCheck, Download, Database, GraduationCap, AlertTriangle,
+  ShieldCheck, Download, Database, GraduationCap, AlertTriangle, Crown, ChevronRight,
 } from 'lucide-react';
 import { useSchool } from '../../context/SchoolContext';
 import { Screen, Card, Btn, Sheet, Pill } from '../components/Chrome';
 import { tap } from '../native';
 import { APP_VERSION } from '../version';
+import Admin from './Admin';
 
 /* ============================================================
    Settings — session, data management, and the honest notes
@@ -14,9 +15,10 @@ import { APP_VERSION } from '../version';
    ============================================================ */
 export default function Settings() {
   const { school, signOutTeacher, resetDemoData, students, marks, payments, toast,
-          isConfigured, queuedChanges, profile, online } = useSchool();
+          isConfigured, queuedChanges, profile, online, isAdmin } = useSchool();
   const [confirmReset, setConfirmReset] = useState(false);
   const [confirmOut, setConfirmOut] = useState(false);
+  const [showAdmin, setShowAdmin] = useState(false);
 
   /* Export the register as CSV. In the app this hands the file to
      Android's share sheet; in a browser it downloads directly. */
@@ -52,6 +54,10 @@ export default function Settings() {
     }
   };
 
+  if (showAdmin && isAdmin && isConfigured) {
+    return <Admin onBack={() => { setShowAdmin(false); window.scrollTo({ top: 0, behavior: 'instant' }); }} />;
+  }
+
   return (
     <Screen icon={Cog} title="More" subtitle="Session, data and app information">
       {/* session */}
@@ -66,7 +72,7 @@ export default function Settings() {
               {profile?.full_name || 'Signed in as faculty'}
             </p>
             <p className="text-[11.5px] text-ink-soft truncate">
-              {profile?.role === 'admin' ? 'Administrator' : isConfigured ? 'Teacher' : 'Demo session'}
+              {profile?.role === 'admin' ? 'Principal / Admin' : isConfigured ? 'Teacher' : 'Demo session'}
               {online ? '' : ' · offline'}
             </p>
           </div>
@@ -75,6 +81,20 @@ export default function Settings() {
           <LogOut className="w-4 h-4" /> Sign out
         </Btn>
       </Card>
+
+      {isAdmin && isConfigured && (
+        <button onClick={() => { tap(); setShowAdmin(true); window.scrollTo({ top: 0, behavior: 'instant' }); }}
+                className="w-full mt-3 flex items-center gap-3 p-4 rounded-2xl bg-ink-950 text-white shadow-lift active:scale-[.98] transition-transform text-left">
+          <span className="w-10 h-10 rounded-2xl bg-brass-400 text-ink-950 flex items-center justify-center shrink-0">
+            <Crown className="w-5 h-5" />
+          </span>
+          <span className="flex-1">
+            <span className="block text-[14px] font-extrabold">Admin</span>
+            <span className="block text-[11.5px] text-ink-300">Approve staff · activity log</span>
+          </span>
+          <ChevronRight className="w-5 h-5 text-ink-400" />
+        </button>
+      )}
 
       {/* data */}
       <h2 className="text-[11px] font-extrabold uppercase tracking-[.14em] text-ink-faint mt-7 mb-2.5">Data on this device</h2>
@@ -95,9 +115,11 @@ export default function Settings() {
         <Btn variant="ink" onClick={exportCsv}>
           <Download className="w-4 h-4" /> Export register as CSV
         </Btn>
-        <Btn variant="ghost" onClick={() => setConfirmReset(true)}>
-          <RotateCcw className="w-4 h-4" /> Restore demo data
-        </Btn>
+        {!isConfigured && (
+          <Btn variant="ghost" onClick={() => setConfirmReset(true)}>
+            <RotateCcw className="w-4 h-4" /> Restore demo data
+          </Btn>
+        )}
       </div>
 
       {/* Where the data actually lives — different answer in each mode. */}

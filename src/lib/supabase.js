@@ -59,6 +59,8 @@ export function friendlyError(error) {
     return 'Your account is not allowed to do that. Ask the principal to check your role.';
   }
   if (/Invalid login credentials/i.test(msg)) return 'That email and password do not match.';
+  if (/rate limit/i.test(msg)) return 'Too many sign-up emails were sent in the last hour. Please try again in an hour, or ask the principal to add you.';
+  if (/already registered|already been registered/i.test(msg)) return 'An account with this email already exists. Sign in instead, or ask the principal to approve it.';
   if (/Email not confirmed/i.test(msg)) return 'Confirm your email address first — check your inbox.';
   if (/Failed to fetch|NetworkError|network|fetch failed/i.test(msg)) {
     return 'No connection to the school database. Your work is saved on this device and will sync when you are back online.';

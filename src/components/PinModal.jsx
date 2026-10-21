@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShieldCheck, Lock, Info, Mail, Eye, EyeOff, AlertCircle, KeyRound } from 'lucide-react';
+import { ShieldCheck, Lock, Info, Mail, Eye, EyeOff, AlertCircle, KeyRound, UserPlus, User, CheckCircle2 } from 'lucide-react';
 import { Modal } from './UI';
 import { useSchool } from '../context/SchoolContext';
 import { SCHOOL } from '../data/school';
 import { Spinner } from './Loaders';
+import { auth } from '../lib/api';
 
 /* ============================================================
    Faculty sign-in.
@@ -29,13 +30,92 @@ export default function PinModal() {
         : 'Enter the faculty PIN to open the marks and register dashboard.'}
       size="sm"
     >
-      {isConfigured ? <EmailForm /> : <PinForm />}
+      {isConfigured ? <ConnectedForms /> : <PinForm />}
     </Modal>
   );
 }
 
+/* ---------- Connected: sign in, or ask for an account ---------- */
+function ConnectedForms() {
+  const [mode, setMode] = useState('signin');
+  return mode === 'signin'
+    ? <EmailForm onRequest={() => setMode('request')} />
+    : <RequestAccessForm onBack={() => setMode('signin')} />;
+}
+
+function RequestAccessForm({ onBack }) {
+  const [f, setF] = useState({ name: '', email: '', password: '', confirm: '' });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+  const [done, setDone] = useState(null);
+  const set = (k) => (e) => { setF(x => ({ ...x, [k]: e.target.value })); setError(null); };
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (f.name.trim().length < 2) return setError('Enter your full name.');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email.trim())) return setError('Enter a valid email address.');
+    if (f.password.length < 8) return setError('Choose a password of at least 8 characters.');
+    if (f.password !== f.confirm) return setError('The two passwords do not match.');
+    setBusy(true);
+    try {
+      setDone(await auth.requestAccess({ fullName: f.name, email: f.email, password: f.password }));
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (done) {
+    return (
+      <div className="text-center space-y-4">
+        <CheckCircle2 className="w-12 h-12 text-garden-600 mx-auto" />
+        <p className="font-display text-lg font-extrabold text-ink-950">Request sent</p>
+        <p className="text-[13px] text-ink-soft leading-relaxed">
+          {done.needsEmailConfirmation && <>First, open the email we just sent to <strong>{f.email}</strong> and confirm your address. </>}
+          The principal will approve your account — after that, sign in with this email and password.
+        </p>
+        <button onClick={onBack} className="btn-ghost w-full">Back to sign in</button>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={submit} className="space-y-3.5">
+      <p className="text-[12px] text-ink-soft bg-ink-50 border border-ink-900/8 rounded-xl p-3 leading-relaxed">
+        For teaching staff only. Your account stays locked until the principal approves it.
+      </p>
+      {[
+        ['ra-name', 'Full name', 'name', 'text', 'name', User],
+        ['ra-email', 'School email address', 'email', 'email', 'username', Mail],
+        ['ra-pass', 'Choose a password', 'password', 'password', 'new-password', KeyRound],
+        ['ra-confirm', 'Repeat the password', 'confirm', 'password', 'new-password', KeyRound],
+      ].map(([id, label, key, type, ac, Icon]) => (
+        <div key={id}>
+          <label htmlFor={id} className="field-label">{label}</label>
+          <div className="relative">
+            <Icon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-faint pointer-events-none" />
+            <input id={id} type={type} autoComplete={ac} value={f[key]} onChange={set(key)} className="field pl-10" />
+          </div>
+        </div>
+      ))}
+      {error && (
+        <p className="flex items-start gap-2 text-[12px] font-semibold text-rose-600 bg-rose-50 border border-rose-200 rounded-xl p-3">
+          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" /> {error}
+        </p>
+      )}
+      <button type="submit" disabled={busy} className="btn-primary w-full">
+        {busy ? <><Spinner className="w-4 h-4" /> Sending…</> : <><UserPlus className="w-4 h-4" /> Request access</>}
+      </button>
+      <button type="button" onClick={onBack} className="w-full text-[12px] font-bold text-ink-soft hover:text-ink-950">
+        Already approved? Sign in
+      </button>
+    </form>
+  );
+}
+
 /* ---------- Connected: per-teacher email + password ---------- */
-function EmailForm() {
+function EmailForm({ onRequest }) {
   const { signIn } = useSchool();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -118,9 +198,12 @@ function EmailForm() {
         {busy ? <><Spinner className="w-4 h-4" /> Signing in…</> : <><Lock className="w-4 h-4" /> Sign in</>}
       </button>
 
+      <button type="button" onClick={onRequest} className="btn-ghost w-full text-xs py-2.5">
+        <UserPlus className="w-4 h-4" /> New teacher? Request access
+      </button>
+
       <p className="text-[11px] text-ink-faint text-center leading-relaxed">
-        Forgotten your password? Ask the principal to reset it from the
-        Supabase dashboard — accounts are created by the school, not self-service.
+        Forgotten your password? Ask the principal to reset it.
       </p>
     </form>
   );
