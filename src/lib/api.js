@@ -28,6 +28,16 @@ const writeCache = (key, value) => {
   try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* full */ }
 };
 
+/* The register and marks are cached for offline use. They hold children's
+   names, parents' names and phone numbers, so they must not outlive the
+   session on a shared computer. */
+export const clearStaffCache = () => {
+  try {
+    localStorage.removeItem(CACHE.students);
+    localStorage.removeItem(CACHE.marks);
+  } catch { /* storage blocked */ }
+};
+
 /* Rows come back from Postgres with database column names; the UI was written
    against the original local shape. These two keep that contract. */
 const fromStudentRow = (r) => ({
@@ -72,10 +82,39 @@ export const auth = {
       password,
     });
     if (error) throw new Error(friendlyError(error));
+
+    // A correct password is not enough: new accounts start inactive and a
+    // departed teacher is deactivated, so refuse those here with a clear reason
+    // instead of leaving them on a dashboard the database will not fill.
+    const profile = await auth.getProfile(data.user?.id);
+    if (!profile?.is_active) {
+      await supabase.auth.signOut();
+      throw new Error('Your account is waiting for the principal to approve it.');
+    }
+
+    // Recorded in the activity log. A failure here must never block a login.
+    supabase.rpc('log_sign_in').then(() => {}, () => {});
     return data;
   },
 
+  /* A new member of staff asks for an account. It is created inactive; the
+     principal approves it from the admin panel before it can see anything. */
+  async requestAccess({ fullName, email, password }) {
+    if (!isConfigured) throw new Error('The app is not connected to a database yet.');
+    const { data, error } = await supabase.auth.signUp({
+      email: email.trim().toLowerCase(),
+      password,
+      options: { data: { full_name: fullName.trim() } },
+    });
+    if (error) throw new Error(friendlyError(error));
+    // If the project auto-confirms emails, sign-up also signs in. The account
+    // is not approved yet, so do not leave that session lying around.
+    if (data.session) await supabase.auth.signOut();
+    return { needsEmailConfirmation: !data.session };
+  },
+
   async signOut() {
+    clearStaffCache();
     if (!isConfigured) return;
     await supabase.auth.signOut();
   },
@@ -142,13 +181,9 @@ export const publicApi = {
     });
     if (error) throw new Error(friendlyError(error));
 
-    // Clear the student's dues, if we can identify them.
-    const { data } = await supabase.rpc('settle_fee', {
-      p_roll: String(payment.roll).trim(),
-      p_class: String(payment.cls).trim(),
-      p_txn: payment.txn,
-    });
-    return data || { ok: true };
+    // Dues are not cleared here: with no gateway confirming the payment, the
+    // office verifies it against the bank statement and marks the student PAID.
+    return { ok: true };
   },
 
   async submitEnquiry(e) {
@@ -391,6 +426,136 @@ export const staffApi = {
 /* ============================================================
    SYNC — replay anything written while offline
    ============================================================ */
+/* ============================================================
+   OFFICE — fees, enquiries, notices (any signed-in staff)
+   ============================================================ */
+export const officeApi = {
+  /* Clear a student's dues once a payment has been checked against the bank. */
+  async settleFee(payment) {
+    const { data, error } = await supabase.rpc('settle_fee', {
+      p_roll: String(payment.roll_no || '').trim(),
+      p_class: String(payment.class || '').trim(),
+      p_txn: payment.txn_ref,
+    });
+    if (error) throw new Error(friendlyError(error));
+    return data;
+  },
+
+  /* Cash or cheque taken at the office counter. */
+  async recordCounterPayment(p) {
+    const txn = `OFF-${Date.now().toString(36).toUpperCase()}`;
+    const { error } = await supabase.from('fee_payments').insert({
+      student_name: p.name.trim(),
+      roll_no: String(p.roll).trim(),
+      class: p.cls,
+      category: p.category || 'Tuition fee',
+      amount: Number(p.amount),
+      txn_ref: txn,
+      contact: p.phone || null,
+      source: 'counter',
+    });
+    if (error) throw new Error(friendlyError(error));
+    return officeApi.settleFee({ roll_no: p.roll, class: p.cls, txn_ref: txn });
+  },
+
+  async listNotices() {
+    const { data, error } = await supabase
+      .from('notices').select('*').order('publish_date', { ascending: false }).limit(200);
+    if (error) throw new Error(friendlyError(error));
+    return data;
+  },
+
+  async saveNotice(n) {
+    const row = {
+      title: n.title.trim(), body: (n.body || '').trim(), tag: n.tag || 'General',
+      is_urgent: Boolean(n.is_urgent), is_published: n.is_published !== false,
+      publish_date: n.publish_date || new Date().toISOString().slice(0, 10),
+    };
+    const q = n.id ? supabase.from('notices').update(row).eq('id', n.id) : supabase.from('notices').insert(row);
+    const { error } = await q;
+    if (error) throw new Error(friendlyError(error));
+  },
+
+  async deleteNotice(id) {
+    const { error } = await supabase.from('notices').delete().eq('id', id);
+    if (error) throw new Error(friendlyError(error));
+  },
+
+  async listEvents() {
+    const { data, error } = await supabase
+      .from('events').select('*').order('event_date', { ascending: true }).limit(200);
+    if (error) throw new Error(friendlyError(error));
+    return data;
+  },
+
+  async saveEvent(e) {
+    const row = {
+      title: e.title.trim(), description: (e.description || '').trim(),
+      event_type: e.event_type || 'Academic', event_date: e.event_date,
+      is_published: e.is_published !== false,
+    };
+    const q = e.id ? supabase.from('events').update(row).eq('id', e.id) : supabase.from('events').insert(row);
+    const { error } = await q;
+    if (error) throw new Error(friendlyError(error));
+  },
+
+  async deleteEvent(id) {
+    const { error } = await supabase.from('events').delete().eq('id', id);
+    if (error) throw new Error(friendlyError(error));
+  },
+};
+
+/* ============================================================
+   ADMIN — principal only. The database refuses every one of
+   these for anyone else, whatever the screen shows.
+   ============================================================ */
+export const adminApi = {
+  async listStaff() {
+    const { data, error } = await supabase.rpc('admin_list_staff');
+    if (error) throw new Error(friendlyError(error));
+    return data || [];
+  },
+
+  /* patch: { is_active?, role?, full_name? } */
+  async setStaff(id, patch) {
+    const { error } = await supabase.rpc('admin_set_staff', {
+      p_id: id,
+      p_is_active: patch.is_active ?? null,
+      p_role: patch.role ?? null,
+      p_full_name: patch.full_name ?? null,
+    });
+    if (error) throw new Error(friendlyError(error));
+  },
+
+  async deleteUser(id) {
+    const { error } = await supabase.rpc('admin_delete_user', { p_id: id });
+    if (error) throw new Error(friendlyError(error));
+  },
+
+  /* Removes a student and every mark linked to them. Teachers can only take a
+     student off the register; this is the permanent version. */
+  async purgeStudent(id) {
+    const { error } = await supabase.from('students').delete().eq('id', id);
+    if (error) throw new Error(friendlyError(error));
+  },
+
+  /* Newest first, PAGE rows at a time. Pass the last row's id as `before`
+     to fetch the next page — this stays fast however long the log grows. */
+  async listActivity({ before, actorId, entity, action, from, to, search, limit = 50 } = {}) {
+    let q = supabase.from('activity_log').select('*').order('id', { ascending: false }).limit(limit);
+    if (before) q = q.lt('id', before);
+    if (actorId) q = actorId === 'public' ? q.is('actor_id', null) : q.eq('actor_id', actorId);
+    if (entity) q = q.eq('entity', entity);
+    if (action) q = q.eq('action', action);
+    if (from) q = q.gte('at', `${from}T00:00:00`);
+    if (to) q = q.lte('at', `${to}T23:59:59.999`);
+    if (search) q = q.ilike('summary', `%${search.replace(/[%_]/g, '')}%`);
+    const { data, error } = await q;
+    if (error) throw new Error(friendlyError(error));
+    return data;
+  },
+};
+
 export const sync = {
   pendingCount: outbox.pendingCount,
 

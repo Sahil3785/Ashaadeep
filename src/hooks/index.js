@@ -54,7 +54,9 @@ export function useReveal(options = {}) {
         el.classList.add('is-visible');
         io.unobserve(el);
       }
-    }, { threshold: 0.12, rootMargin: '0px 0px -60px 0px', ...options });
+    // threshold 0: reveal as soon as any part enters. A ratio threshold kept a
+    // tall card blank while its top was already on screen.
+    }, { threshold: 0, rootMargin: '0px 0px -40px 0px', ...options });
 
     io.observe(el);
     return () => io.disconnect();

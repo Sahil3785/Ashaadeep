@@ -59,8 +59,17 @@ export default function Header() {
   }, []);
 
   // Condense the header once the user scrolls past the ribbon.
+  //
+  // Collapsing the ribbon shortens the sticky header by ~45px, and the
+  // browser's scroll anchoring shifts scrollY by the same amount. With a
+  // single threshold that shift crosses it straight back, the ribbon
+  // re-opens, and the header flickers in a loop. Two thresholds further
+  // apart than the ribbon's height (hysteresis) break that loop.
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 40);
+    const onScroll = () => {
+      const y = window.scrollY;
+      setScrolled(prev => (prev ? y > 8 : y > 80));
+    };
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);

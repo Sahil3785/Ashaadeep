@@ -91,7 +91,7 @@ export default function Fees() {
     setStep(3);
     window.scrollTo({ top: 0, behavior: 'smooth' });
     celebrate();
-    toast('Payment recorded and the fee ledger has been updated.', 'success', 'Payment successful');
+    toast('Payment recorded. The office will verify it and update the fee status.', 'success', 'Payment received');
   };
 
   const download = async () => {
@@ -334,8 +334,8 @@ export default function Fees() {
                   {inr(txn.amount)} received
                 </h2>
                 <p className="text-xs text-ink-soft mt-2 max-w-sm mx-auto leading-relaxed">
-                  Reference <strong className="font-mono text-ink-950">{txn.id}</strong>. The fee ledger has been
-                  updated, so any marksheet that was on hold is now available.
+                  Reference <strong className="font-mono text-ink-950">{txn.id}</strong>. The office will check the
+                  payment against the bank statement and release any marksheet on hold, usually within one working day.
                 </p>
 
                 <div className="flex flex-wrap justify-center gap-2.5 mt-6">

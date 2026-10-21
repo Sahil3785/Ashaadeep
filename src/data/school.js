@@ -152,6 +152,12 @@ export const EXAM_TERMS = [
   { value: 'FINAL', label: 'Pre-Board Examination' },
 ];
 
+/* One-tap maximum marks on the marks forms. Any other value can still be typed. */
+export const MAX_PRESETS = {
+  theory:   [20, 25, 30, 40, 50, 60, 70, 80, 100],
+  internal: [0, 5, 10, 20, 25, 30, 50],
+};
+
 export const CLASS_LIST = ['PP1', 'PP2', '1ST', '2ND', '3RD', '4TH', '5TH', '6TH', '7TH', '8TH', '9TH', '10TH'];
 
 export const SUBJECT_CODES = {

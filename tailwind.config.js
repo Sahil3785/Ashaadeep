@@ -73,10 +73,13 @@ export default {
         'bar-grow': { from: { transform: 'scaleX(0)' }, to: { transform: 'scaleX(1)' } },
         'ring-pulse': { '0%': { boxShadow: '0 0 0 0 rgba(245,158,11,.5)' }, '70%': { boxShadow: '0 0 0 14px rgba(245,158,11,0)' }, '100%': { boxShadow: '0 0 0 0 rgba(245,158,11,0)' } },
       },
+      // fade-up / fade-in use `backwards`, not `both`: a fill that outlives the
+      // animation keeps the element in its own stacking context, which traps
+      // any dialog opened inside a page beneath the sticky header.
       animation: {
         marquee: 'marquee 38s linear infinite',
-        'fade-up': 'fade-up .6s cubic-bezier(.22,1,.36,1) both',
-        'fade-in': 'fade-in .5s ease both',
+        'fade-up': 'fade-up .6s cubic-bezier(.22,1,.36,1) backwards',
+        'fade-in': 'fade-in .5s ease backwards',
         shimmer: 'shimmer 1.6s infinite',
         float: 'float 6s ease-in-out infinite',
         'float-slow': 'float-slow 14s ease-in-out infinite',

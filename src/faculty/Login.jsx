@@ -1,12 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   GraduationCap, Delete, ShieldCheck, Info, Mail, KeyRound, Eye, EyeOff,
-  AlertCircle, LogIn, WifiOff,
+  AlertCircle, LogIn, WifiOff, UserPlus, User, CheckCircle2,
 } from 'lucide-react';
 import { SCHOOL } from '../data/school';
 import { useSchool } from '../context/SchoolContext';
 import { tap } from './native';
 import { Field, Btn, inputCls } from './components/Chrome';
+import { auth } from '../lib/api';
 
 /* ============================================================
    Sign-in.
@@ -23,7 +24,7 @@ export default function Login() {
   return (
     <div className="min-h-screen flex flex-col bg-ink-950 text-white">
       <Crest />
-      {isConfigured ? <EmailLogin /> : <PinLogin />}
+      {isConfigured ? <ConnectedLogin /> : <PinLogin />}
     </div>
   );
 }
@@ -44,8 +45,106 @@ function Crest() {
   );
 }
 
+/* ---------- Connected: sign in, or ask for an account ---------- */
+function ConnectedLogin() {
+  const [mode, setMode] = useState('signin');
+  return mode === 'signin'
+    ? <EmailLogin onRequest={() => setMode('request')} />
+    : <RequestAccess onBack={() => setMode('signin')} />;
+}
+
+const darkInput = (error) =>
+  `w-full rounded-2xl border bg-white/8 pl-10 pr-3.5 py-3.5 text-base text-white placeholder:text-ink-600 outline-none transition-all
+   ${error ? 'border-rose-400' : 'border-white/15 focus:border-brass-400 focus:bg-white/12'}`;
+
+function RequestAccess({ onBack }) {
+  const [f, setF] = useState({ name: '', email: '', password: '', confirm: '' });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+  const [done, setDone] = useState(null);
+  const set = (k) => (e) => { setF(x => ({ ...x, [k]: e.target.value })); setError(null); };
+
+  const submit = async (e) => {
+    e.preventDefault();
+    let problem = null;
+    if (f.name.trim().length < 2) problem = 'Enter your full name.';
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email.trim())) problem = 'Enter a valid email address.';
+    else if (f.password.length < 8) problem = 'Choose a password of at least 8 characters.';
+    else if (f.password !== f.confirm) problem = 'The two passwords do not match.';
+    if (problem) { tap('error'); setError(problem); return; }
+
+    setBusy(true);
+    try {
+      setDone(await auth.requestAccess({ fullName: f.name, email: f.email, password: f.password }));
+      tap('success');
+    } catch (err) {
+      tap('error');
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (done) {
+    return (
+      <div className="flex-1 flex flex-col px-5 pb-8 text-center">
+        <CheckCircle2 className="w-14 h-14 text-garden-400 mx-auto mt-4" />
+        <p className="font-display text-xl font-extrabold mt-4">Request sent</p>
+        <p className="text-[13px] text-ink-300 mt-2 leading-relaxed">
+          {done.needsEmailConfirmation && <>First, open the email sent to <strong className="text-white">{f.email}</strong> and confirm your address. </>}
+          The principal will approve your account — then sign in with this email and password.
+        </p>
+        <button onClick={onBack}
+                className="mt-8 w-full rounded-2xl px-5 py-3.5 text-[15px] font-bold bg-white/10 text-white active:scale-[.97]">
+          Back to sign in
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={submit} className="flex-1 flex flex-col px-5 pb-8">
+      <p className="text-[12px] text-ink-300 bg-white/6 border border-white/10 rounded-2xl p-3 mb-4 leading-relaxed">
+        For teaching staff only. Your account stays locked until the principal approves it.
+      </p>
+      <div className="space-y-3.5">
+        {[
+          ['ra-name', 'Full name', 'name', 'text', 'name', User],
+          ['ra-email', 'School email address', 'email', 'email', 'username', Mail],
+          ['ra-pass', 'Choose a password', 'password', 'password', 'new-password', KeyRound],
+          ['ra-confirm', 'Repeat the password', 'confirm', 'password', 'new-password', KeyRound],
+        ].map(([id, label, key, type, ac, Icon]) => (
+          <div key={id}>
+            <label htmlFor={id} className="block text-[12px] font-bold text-ink-300 mb-1.5">{label}</label>
+            <div className="relative">
+              <Icon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-500 pointer-events-none" />
+              <input id={id} type={type} autoComplete={ac} value={f[key]} onChange={set(key)}
+                     inputMode={type === 'email' ? 'email' : undefined} className={darkInput(error)} />
+            </div>
+          </div>
+        ))}
+
+        {error && (
+          <p className="flex items-start gap-2 text-[12px] font-semibold text-rose-300 bg-rose-500/12 border border-rose-500/30 rounded-2xl p-3">
+            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" /> {error}
+          </p>
+        )}
+
+        <button type="submit" disabled={busy}
+                className="w-full inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3.5 text-[15px] font-bold
+                           bg-gradient-to-br from-brass-400 to-brass-500 text-ink-950 shadow-brass active:scale-[.97] transition-all disabled:opacity-55">
+          <UserPlus className="w-4.5 h-4.5" /> {busy ? 'Sending…' : 'Request access'}
+        </button>
+        <button type="button" onClick={onBack} className="w-full py-2 text-[13px] font-bold text-ink-300 active:text-white">
+          Already approved? Sign in
+        </button>
+      </div>
+    </form>
+  );
+}
+
 /* ---------- Connected: email + password ---------- */
-function EmailLogin() {
+function EmailLogin({ onRequest }) {
   const { signIn, online } = useSchool();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -149,9 +248,13 @@ function EmailLogin() {
       </div>
 
       <div className="mt-auto pt-8 space-y-3">
+        <button type="button" onClick={onRequest}
+                className="w-full inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3 text-[14px] font-bold
+                           bg-white/8 border border-white/12 text-white active:scale-[.97] transition-all">
+          <UserPlus className="w-4 h-4" /> New teacher? Request access
+        </button>
         <p className="text-center text-[11px] text-ink-500 leading-relaxed">
-          Accounts are created by the school. If you have forgotten your password,
-          ask the principal to reset it for you.
+          Forgotten your password? Ask the principal to reset it for you.
         </p>
         <p className="text-center text-[10.5px] text-ink-600 flex items-center justify-center gap-1.5">
           <ShieldCheck className="w-3 h-3" /> Your session stays on this phone only

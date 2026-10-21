@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { ChevronLeft } from 'lucide-react';
 import { pushDismiss } from '../dismissStack';
 import SyncBar from './SyncBar';
@@ -77,7 +78,7 @@ export const inputCls = (error) =>
    placeholder:text-ink-faint placeholder:text-sm
    ${error ? 'border-rose-400 ring-4 ring-rose-400/15' : 'border-ink-900/15 focus:border-brass-400 focus:ring-4 focus:ring-brass-400/20'}`;
 
-export const selectCls = (error) => `${inputCls(error)} font-semibold appearance-none bg-no-repeat`;
+export const selectCls = (error) => `${inputCls(error)} app-select font-semibold appearance-none bg-no-repeat`;
 
 /* ============================================================
    Btn — full-width by default, with a pressed state that is
@@ -140,18 +141,22 @@ export function Sheet({ open, onClose, title, children }) {
 
   if (!open) return null;
 
-  return (
+  // Portalled to <body>: rendered inside the animated screen, the sheet was
+  // trapped in that screen's stacking context and the bottom nav (z-40)
+  // painted over its last buttons, whatever z-index the sheet had.
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-end" role="dialog" aria-modal="true">
       <div className="absolute inset-0 bg-ink-950/55 animate-fade-in" onClick={onClose} />
-      <div className="relative w-full max-h-[88vh] overflow-y-auto bg-white rounded-t-3xl shadow-float animate-sheet-up">
+      <div className="app-sheet-panel relative w-full max-h-[88vh] overflow-y-auto bg-white rounded-t-3xl shadow-float animate-sheet-up">
         {/* grab handle */}
         <div className="sticky top-0 bg-white pt-3 pb-2 rounded-t-3xl">
           <div className="w-10 h-1 rounded-full bg-ink-200 mx-auto" />
           {title && <h2 className="font-display text-base font-extrabold text-ink-950 text-center mt-2.5 px-5">{title}</h2>}
         </div>
-        <div className="px-5 pb-8 pt-2">{children}</div>
+        <div className="px-5 pt-2 pb-[calc(2rem+env(safe-area-inset-bottom))]">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

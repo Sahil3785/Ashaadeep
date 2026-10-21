@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import React from 'react';
 import { X } from 'lucide-react';
 import { useReveal, useCountUp, useScrollLock, useEscape, useFocusTrap } from '../hooks';
@@ -159,7 +160,9 @@ export function Modal({ open, onClose, title, subtitle, children, size = 'md', i
 
   const widths = { sm: 'max-w-sm', md: 'max-w-lg', lg: 'max-w-2xl', xl: 'max-w-4xl' };
 
-  return (
+  // Portalled to <body> so a dialog opened inside an animated page can never be
+  // layered beneath the sticky header.
+  return createPortal(
     <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 no-print">
       {/* backdrop */}
       <div className="absolute inset-0 bg-ink-950/55 backdrop-blur-sm animate-fade-in" onClick={onClose} />
@@ -193,7 +196,8 @@ export function Modal({ open, onClose, title, subtitle, children, size = 'md', i
 
         <div className="p-7">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

@@ -3,7 +3,7 @@ import {
   Megaphone, CalendarDays, Search, AlertCircle, Filter, Clock,
   Bell, FileText, PartyPopper, IndianRupee, GraduationCap, Flag,
 } from 'lucide-react';
-import { NOTICES, EVENTS } from '../data/school';
+import { usePublished } from '../hooks/usePublished';
 import { PageHeader, Reveal, SectionHeader, Badge, Tabs } from '../components/UI';
 import { EmptyState, SkCardGrid } from '../components/Loaders';
 import { useDelay, useAnchorOnChange } from '../hooks';
@@ -20,6 +20,7 @@ const TAG_TONES = {
 };
 
 export default function Notices() {
+  const { notices: NOTICES, events: EVENTS } = usePublished();
   const [tab, setTab] = useState('notices');
   const [query, setQuery] = useState('');
   const [tag, setTag] = useState('All');
@@ -28,7 +29,7 @@ export default function Notices() {
   // Notices and the calendar are very different lengths — keep the tabs in view.
   const tabsRef = useAnchorOnChange(tab);
 
-  const tags = useMemo(() => ['All', ...new Set(NOTICES.map(n => n.tag))], []);
+  const tags = useMemo(() => ['All', ...new Set(NOTICES.map(n => n.tag))], [NOTICES]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -37,7 +38,7 @@ export default function Notices() {
       const matchQuery = !q || n.title.toLowerCase().includes(q) || n.body.toLowerCase().includes(q);
       return matchTag && matchQuery;
     });
-  }, [query, tag]);
+  }, [NOTICES, query, tag]);
 
   const urgentCount = NOTICES.filter(n => n.urgent).length;
 

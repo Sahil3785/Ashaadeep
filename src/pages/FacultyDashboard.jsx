@@ -2,18 +2,21 @@ import React, { useState, useMemo } from 'react';
 import {
   LayoutDashboard, PlusCircle, UserPlus, Users, Search, Trash2, LogOut, Lock,
   CheckCircle2, AlertCircle, TrendingUp, IndianRupee, FileSpreadsheet, RotateCcw,
-  Filter, Download, BookOpen, Pencil, X, Save, ClipboardList,
+  Filter, Download, BookOpen, Pencil, X, Save, ClipboardList, Megaphone, ShieldCheck, History, Crown,
 } from 'lucide-react';
-import { SCHOOL, CLASS_LIST, EXAM_TERMS, SUBJECT_CODES } from '../data/school';
+import { SCHOOL, CLASS_LIST, EXAM_TERMS, SUBJECT_CODES, MAX_PRESETS } from '../data/school';
 import { summarise } from '../data/syllabus';
 import { useSchool } from '../context/SchoolContext';
 import { PageHeader, Reveal, Badge, Tabs, StatTile, Modal, ProgressBar } from '../components/UI';
 import { SkTable, EmptyState, Spinner } from '../components/Loaders';
 import { useDelay, useAnchorOnChange } from '../hooks';
 import { inr, initialsOf } from '../utils/format';
+import { adminApi, staffApi } from '../lib/api';
+import { FeesTab, EnquiriesTab, NoticesTab } from './dashboard/OfficeTabs';
+import { StaffTab, ActivityTab } from './dashboard/AdminTabs';
 
 export default function FacultyDashboard() {
-  const { signOutTeacher, resetDemoData, students } = useSchool();
+  const { signOutTeacher, resetDemoData, students, isAdmin, isConfigured, profile } = useSchool();
   const [tab, setTab] = useState('overview');
   // First mount only — switching dashboard tabs must not reflow the page.
   const ready = useDelay(450);
@@ -25,6 +28,17 @@ export default function FacultyDashboard() {
     { id: 'marks', label: 'Enter marks', icon: PlusCircle },
     { id: 'enroll', label: 'Enrol student', icon: UserPlus },
     { id: 'register', label: 'Register', icon: Users, count: students.length },
+    // Office tools read and write the shared database, so they need it.
+    ...(isConfigured ? [
+      { id: 'fees', label: 'Fees', icon: IndianRupee },
+      { id: 'enquiries', label: 'Enquiries', icon: ClipboardList },
+      { id: 'notices', label: 'Notices', icon: Megaphone },
+    ] : []),
+    // Principal only — the database refuses these for anyone else as well.
+    ...(isConfigured && isAdmin ? [
+      { id: 'staff', label: 'Staff', icon: ShieldCheck },
+      { id: 'activity', label: 'Activity log', icon: History },
+    ] : []),
   ];
 
   return (
@@ -33,10 +47,17 @@ export default function FacultyDashboard() {
         icon={LayoutDashboard}
         eyebrow="Faculty area"
         title="Faculty dashboard"
-        lead="Enter marks, enrol students and manage the fee ledger. Everything you save here is written to this browser's local storage, which is what the public result and fee pages read from."
+        lead={isConfigured
+          ? 'Enter marks, enrol students, verify fees and publish notices. Everything you save goes straight to the school database, so the website and every teacher\'s phone see it at once.'
+          : 'Demo mode — no school database is connected, so everything you save stays in this browser only.'}
       >
         <div className="flex flex-wrap items-center gap-2">
-          <Badge tone="garden" icon={CheckCircle2}>Session active</Badge>
+          {isConfigured && profile && (
+            <Badge tone={isAdmin ? 'brass' : 'ink'} icon={isAdmin ? Crown : CheckCircle2}>
+              {profile.full_name} · {isAdmin ? 'Principal / Admin' : 'Teacher'}
+            </Badge>
+          )}
+          {!isConfigured && <Badge tone="garden" icon={CheckCircle2}>Session active</Badge>}
           <button onClick={signOutTeacher} className="btn-danger text-xs py-2">
             <LogOut className="w-3.5 h-3.5" /> Sign out
           </button>
@@ -54,9 +75,14 @@ export default function FacultyDashboard() {
         {tab === 'marks' && <MarksEntry />}
         {tab === 'enroll' && <EnrolStudent />}
         {tab === 'register' && <Register ready={ready} />}
+        {tab === 'fees' && <FeesTab />}
+        {tab === 'enquiries' && <EnquiriesTab />}
+        {tab === 'notices' && <NoticesTab />}
+        {tab === 'staff' && isAdmin && <StaffTab />}
+        {tab === 'activity' && isAdmin && <ActivityTab />}
 
-        {/* ---------- Reset demo data ---------- */}
-        <Reveal>
+        {/* ---------- Reset demo data (demo mode only) ---------- */}
+        {!isConfigured && <Reveal>
           <div className="card p-6 mt-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-brass-200 bg-brass-50/50">
             <div className="flex gap-3.5">
               <RotateCcw className="w-5 h-5 text-brass-600 shrink-0 mt-0.5" />
@@ -73,7 +99,7 @@ export default function FacultyDashboard() {
               <RotateCcw className="w-3.5 h-3.5" /> Reset data
             </button>
           </div>
-        </Reveal>
+        </Reveal>}
       </div>
     </>
   );
@@ -83,9 +109,13 @@ export default function FacultyDashboard() {
    TAB 1 — OVERVIEW
    ============================================================ */
 function Overview({ ready }) {
-  const { stats, students, marks, payments } = useSchool();
+  const { stats, students, marks, payments, isConfigured } = useSchool();
 
-  const collected = payments.reduce((a, p) => a + (Number(p.amount) || 0), 0);
+  // Connected: the fee total comes from the database, not this browser.
+  const [server, setServer] = React.useState(null);
+  React.useEffect(() => { if (isConfigured) staffApi.stats().then(setServer, () => {}); }, [isConfigured]);
+
+  const collected = server ? Number(server.collected) || 0 : payments.reduce((a, p) => a + (Number(p.amount) || 0), 0);
   const pendingList = students.filter(s => s.fee_status !== 'PAID');
 
   return (
@@ -95,7 +125,9 @@ function Overview({ ready }) {
         <Reveal delay={0}><StatTile icon={Users} value={stats.totalStudents} label="Students on roll" note={`Across ${stats.classCount} classes`} tone="ink" /></Reveal>
         <Reveal delay={80}><StatTile icon={CheckCircle2} value={stats.collectionRate} suffix="%" label="Fee collection" note={`${stats.paid} paid · ${stats.pending} pending`} tone="garden" /></Reveal>
         <Reveal delay={160}><StatTile icon={FileSpreadsheet} value={stats.totalMarks} label="Mark entries" note="All terms and subjects" tone="brass" /></Reveal>
-        <Reveal delay={240}><StatTile icon={IndianRupee} value={payments.length} label="Payments logged" note={collected ? `${inr(collected)} total` : 'This browser session'} tone="brass" /></Reveal>
+        <Reveal delay={240}>{server
+          ? <StatTile icon={IndianRupee} value={server.new_enquiries ?? 0} label="New enquiries" note={`${inr(collected)} fees recorded`} tone="brass" />
+          : <StatTile icon={IndianRupee} value={payments.length} label="Payments logged" note={collected ? `${inr(collected)} total` : 'This browser session'} tone="brass" />}</Reveal>
       </div>
 
       {/* class-wise breakdown */}
@@ -298,6 +330,8 @@ function MarksEntry() {
                 <input id="tmax" type="number" min="0" value={f.theoryMax} onChange={set('theoryMax')}
                        className={`field ${errors.theoryMax ? 'field-error' : ''}`} />
                 {errors.theoryMax && <Err>{errors.theoryMax}</Err>}
+                <QuickMax values={MAX_PRESETS.theory} current={f.theoryMax} label="Theory maximum"
+                          onPick={v => set('theoryMax')({ target: { value: v } })} />
               </div>
 
               <div>
@@ -313,6 +347,8 @@ function MarksEntry() {
                 <input id="pmax" type="number" min="0" value={f.practMax} onChange={set('practMax')}
                        className={`field ${errors.practMax ? 'field-error' : ''}`} />
                 {errors.practMax && <Err>{errors.practMax}</Err>}
+                <QuickMax values={MAX_PRESETS.internal} current={f.practMax} label="Internal maximum"
+                          onPick={v => set('practMax')({ target: { value: v } })} />
               </div>
 
               <div>
@@ -582,7 +618,15 @@ function EnrolStudent() {
    TAB 4 — REGISTER
    ============================================================ */
 function Register({ ready }) {
-  const { students, marks, deleteStudent, toggleFee, updateStudent } = useSchool();
+  const { students, marks, deleteStudent, toggleFee, updateStudent, isAdmin, isConfigured, refresh, toast } = useSchool();
+
+  const purge = async (s) => {
+    try {
+      await adminApi.purgeStudent(s.student_id);
+      toast(`${s.name} and all their marks were deleted permanently.`, 'info', 'Deleted');
+      refresh();
+    } catch (e) { toast(e.message, 'error', 'Not deleted'); }
+  };
   const [query, setQuery] = useState('');
   const [cls, setCls] = useState('ALL');
   const [feeFilter, setFeeFilter] = useState('ALL');
@@ -745,7 +789,9 @@ function Register({ ready }) {
       {/* delete confirmation */}
       <Modal open={!!confirmDelete} onClose={() => setConfirmDelete(null)}
              icon={Trash2} title="Remove this student?"
-             subtitle="This also deletes every mark entry linked to them. It cannot be undone from here — only a data reset would bring the demo records back."
+             subtitle={isConfigured
+               ? 'Removing takes them off the register but keeps their record and marks, so it can be traced later. Only an admin can delete permanently.'
+               : 'This also deletes every mark entry linked to them. Only a data reset brings the demo records back.'}
              size="sm">
         {confirmDelete && (
           <>
@@ -759,10 +805,20 @@ function Register({ ready }) {
             <div className="flex gap-2.5">
               <button onClick={() => { deleteStudent(confirmDelete.student_id); setConfirmDelete(null); }}
                       className="btn bg-rose-600 text-white hover:bg-rose-700 flex-1">
-                <Trash2 className="w-4 h-4" /> Remove permanently
+                <Trash2 className="w-4 h-4" /> {isConfigured ? 'Remove from register' : 'Remove permanently'}
               </button>
               <button onClick={() => setConfirmDelete(null)} className="btn-ghost flex-1">Keep it</button>
             </div>
+            {isConfigured && isAdmin && (
+              <button onClick={() => {
+                        if (confirm(`Delete ${confirmDelete.name} and every mark permanently? This cannot be undone.`)) {
+                          purge(confirmDelete); setConfirmDelete(null);
+                        }
+                      }}
+                      className="w-full mt-3 text-[12px] font-bold text-rose-700 hover:underline">
+                Admin: delete permanently, including all marks
+              </button>
+            )}
           </>
         )}
       </Modal>
@@ -856,6 +912,25 @@ function EditStudentModal({ student, onClose, onSave }) {
         </div>
       </form>
     </Modal>
+  );
+}
+
+/* One-tap maximum marks under a Max field, so "out of 80" is a single tap. */
+function QuickMax({ values, current, onPick, label }) {
+  return (
+    <div className="flex flex-wrap gap-1.5 mt-2" role="group" aria-label={`Quick ${label}`}>
+      {values.map(v => {
+        const on = String(current) === String(v);
+        return (
+          <button key={v} type="button" onClick={() => onPick(String(v))} aria-pressed={on}
+                  className={`min-w-[2.25rem] px-2 py-1 rounded-lg text-[11px] font-bold font-mono border transition-colors ${
+                    on ? 'bg-ink-950 text-brass-300 border-ink-950'
+                       : 'bg-white text-ink-700 border-ink-900/15 hover:border-brass-400 hover:bg-brass-50'}`}>
+            {v}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
