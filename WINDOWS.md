@@ -52,3 +52,17 @@ The website's download button points at
 `https://github.com/Sahil3785/Ashaadeep/releases/latest/download/AshaDeepStaff-Setup.exe`,
 which always serves the newest release — the link never changes. Keep the
 asset name `AshaDeepStaff-Setup.exe` for that to keep working.
+
+## Trying it on a Mac
+
+Without a Windows PC, build the same program for macOS:
+
+```bash
+npm run exe                              # stages release/app/
+node scripts/build-desktop-mac.mjs       # installs ~/Applications/Asha Deep Staff.app
+```
+
+It is the identical dashboard and database; only the window chrome differs.
+To test the real Windows installer on an Apple-silicon Mac, run Windows 11
+on ARM in a virtual machine (UTM is free) — x64 programs like this one run
+there through Windows' built-in emulation.

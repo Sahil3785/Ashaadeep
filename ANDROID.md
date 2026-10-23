@@ -248,3 +248,17 @@ adb install -r android/app/build/outputs/apk/debug/app-debug.apk
 | Version shown in More | `src/faculty/version.js` and `versionName` in `android/app/build.gradle` |
 
 After any change: `npm run apk`.
+
+## Trying it in the emulator
+
+```bash
+./scripts/run-android.sh                 # boots AshaDeep_Phone, installs the APK, opens it
+./scripts/run-android.sh some-other.apk
+```
+
+The virtual phone (Pixel 6, Android 14, arm64) was created with:
+
+```bash
+sdkmanager "emulator" "system-images;android-34;google_apis;arm64-v8a"
+avdmanager create avd -n AshaDeep_Phone -k "system-images;android-34;google_apis;arm64-v8a" -d pixel_6
+```
