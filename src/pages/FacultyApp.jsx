@@ -26,6 +26,10 @@ const FEATURES = [
   { icon: ShieldCheck, title: 'Your own login', desc: 'Each teacher has their own email and password. No shared PIN, and the record shows who entered what.' },
 ];
 
+// Always the newest GitHub Release, so the button works even before
+// app-info.json (which only supplies the version and size) has loaded.
+const WINDOWS_DOWNLOAD = 'https://github.com/Sahil3785/Ashaadeep/releases/latest/download/AshaDeepStaff-Setup.exe';
+
 const STEPS = [
   { n: 1, title: 'Download the file', body: 'Tap the download button on this page from your Android phone. The file is about 4 MB and takes a few seconds on any connection.' },
   { n: 2, title: 'Open it', body: 'Pull down the notification shade and tap the downloaded file, or find it in your Files app under Downloads.' },
@@ -140,7 +144,7 @@ export default function FacultyAppPage() {
                   defaulters, marks, register and notices on a big screen. Windows 10 or 11 · {win?.sizeMB ? `${win.sizeMB} MB` : '≈80 MB'}
                 </p>
                 <div className="flex flex-wrap gap-3 mt-6">
-                  <a href={win?.file || '#'} className="btn-ink" aria-disabled={!win?.file}>
+                  <a href={WINDOWS_DOWNLOAD} className="btn-ink" rel="noopener">
                     <Download className="w-4 h-4" /> Download for Windows
                   </a>
                 </div>
