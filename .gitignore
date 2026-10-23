@@ -41,3 +41,4 @@ npm-debug.log*
 !.env.example
 dist-desktop/
 release/
+downloads/windows/

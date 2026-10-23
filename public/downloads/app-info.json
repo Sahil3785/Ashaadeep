@@ -16,7 +16,7 @@
   "windows": {
     "name": "Asha Deep Staff for Windows",
     "version": "1.0.0",
-    "file": "https://github.com/Sahil3785/Ashaadeep/raw/main/downloads/windows/AshaDeepStaff-Setup.exe",
+    "file": "https://github.com/Sahil3785/Ashaadeep/releases/latest/download/AshaDeepStaff-Setup.exe",
     "sizeMB": 78.6,
     "minWindows": "10",
     "releasedOn": "2026-10-23"

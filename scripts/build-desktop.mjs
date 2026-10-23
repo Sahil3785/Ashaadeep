@@ -8,8 +8,8 @@
    2. it is staged in release/app/ with a tiny package.json, so
       none of the website's or Android's packages end up inside
       the Windows program
-   3. electron-builder makes AshaDeepStaff-Setup.exe, copied to
-      downloads/windows/ (the website links to it on GitHub)
+   3. electron-builder makes release/dist/AshaDeepStaff-Setup.exe,
+      which is published as a GitHub Release (see the end of the run)
 
    Building on a Mac: electron-builder normally edits the .exe's
    icon with a Windows tool run under Wine. That step is switched
@@ -17,7 +17,7 @@
    Wine is needed.
    ============================================================ */
 import { execSync } from 'node:child_process';
-import { cpSync, mkdirSync, rmSync, writeFileSync, readFileSync, statSync, copyFileSync, existsSync } from 'node:fs';
+import { cpSync, mkdirSync, rmSync, writeFileSync, readFileSync, statSync, existsSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { build, Platform } from 'electron-builder';
 import * as ResEdit from 'resedit';
@@ -91,14 +91,11 @@ function brandExe(file) {
   writeFileSync(file, Buffer.from(exe.generate()));
 }
 
-// ~80 MB is too big to ship inside every website deployment, so the installer
-// lives in the repository's downloads/windows/ folder and the website links
-// to it on GitHub. (GitHub Releases is the better home once there are many
-// versions — see ROADMAP.md.)
-mkdirSync('downloads/windows', { recursive: true });
-copyFileSync('release/dist/AshaDeepStaff-Setup.exe', 'downloads/windows/AshaDeepStaff-Setup.exe');
-const sizeMB = Math.round(statSync('downloads/windows/AshaDeepStaff-Setup.exe').size / 1048576 * 10) / 10;
-const DOWNLOAD_URL = 'https://github.com/Sahil3785/Ashaadeep/raw/main/downloads/windows/AshaDeepStaff-Setup.exe';
+// The installer (~80 MB) is published as a GitHub Release asset, not committed
+// and not shipped with the website. This link always points at the newest
+// release, so the website never needs changing when a new version goes up.
+const DOWNLOAD_URL = 'https://github.com/Sahil3785/Ashaadeep/releases/latest/download/AshaDeepStaff-Setup.exe';
+const sizeMB = Math.round(statSync('release/dist/AshaDeepStaff-Setup.exe').size / 1048576 * 10) / 10;
 
 const infoPath = 'public/downloads/app-info.json';
 const info = JSON.parse(readFileSync(infoPath, 'utf8'));
@@ -107,4 +104,11 @@ info.windows = {
   minWindows: '10', releasedOn: new Date().toISOString().slice(0, 10),
 };
 writeFileSync(infoPath, JSON.stringify(info, null, 2) + '\n');
-console.log(`\nWindows installer ready: downloads/windows/AshaDeepStaff-Setup.exe (${sizeMB} MB)\n`);
+console.log(`
+Windows installer ready: release/dist/AshaDeepStaff-Setup.exe (${sizeMB} MB)
+
+Publish it (needs the GitHub CLI, signed in once with  gh auth login):
+  gh release create desktop-v${version} release/dist/AshaDeepStaff-Setup.exe \\
+     --title "Asha Deep Staff for Windows ${version}" --notes "Windows staff app ${version}"
+Then commit public/downloads/app-info.json and push.
+`);
