@@ -1,0 +1,5 @@
+# The Windows installer is linked from GitHub, not served by the website.
+downloads/
+release/
+dist-desktop/
+android/

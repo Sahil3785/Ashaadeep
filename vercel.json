@@ -61,5 +61,11 @@
         }
       ]
     }
-  ]
+  ],
+  "build": {
+    "env": {
+      "ELECTRON_SKIP_BINARY_DOWNLOAD": "1"
+    }
+  },
+  "installCommand": "ELECTRON_SKIP_BINARY_DOWNLOAD=1 npm install"
 }

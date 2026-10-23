@@ -2,7 +2,7 @@
   "name": "ashadeep-school-portal",
   "private": true,
   "version": "3.0.0",
-  "description": "School portal for Asha Deep Adarsh High School, Karhans (Panipat) \u2014 public website plus an Android faculty app, sharing one Supabase database.",
+  "description": "School portal for Asha Deep Adarsh High School, Karhans (Panipat) — public website plus an Android faculty app, sharing one Supabase database.",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -12,7 +12,10 @@
     "build:app": "vite build --config vite.config.app.js",
     "sync:app": "npm run build:app && npx cap sync android",
     "apk": "npm run sync:app && cd android && ./gradlew assembleDebug",
-    "check:db": "node scripts/check-db.mjs"
+    "check:db": "node scripts/check-db.mjs",
+    "dev:desktop": "vite --config vite.config.desktop.js",
+    "build:desktop": "vite build --config vite.config.desktop.js",
+    "exe": "node scripts/build-desktop.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^6.2.2",
@@ -36,8 +39,12 @@
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "^10.4.20",
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8",
     "postcss": "^8.4.49",
+    "resedit": "^2.0.3",
     "tailwindcss": "^3.4.17",
     "vite": "^5.4.14"
-  }
+  },
+  "desktopVersion": "1.0.0"
 }

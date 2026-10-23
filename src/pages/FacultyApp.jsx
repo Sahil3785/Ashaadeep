@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Smartphone, Download, ShieldCheck, WifiOff, CheckCircle2, AlertTriangle,
-  PlusCircle, Users, UserPlus, LayoutDashboard, HelpCircle, Phone, ArrowRight, Info,
+  PlusCircle, Users, UserPlus, LayoutDashboard, HelpCircle, Phone, ArrowRight, Info, Monitor, IndianRupee, Printer,
 } from 'lucide-react';
 import { SCHOOL } from '../data/school';
 import { PageHeader, Reveal, SectionHeader, Badge, Accordion, IconTile, toneFor } from '../components/UI';
@@ -21,6 +21,7 @@ const FEATURES = [
   { icon: PlusCircle, title: 'Enter marks', desc: 'Class, student, term, subject and the four numbers. Shows what is already recorded so you can see what is still missing.' },
   { icon: Users, title: 'Student register', desc: 'Search and filter the whole register. Tap a student to call the guardian, change their fee status, edit or remove them.' },
   { icon: UserPlus, title: 'Enrol students', desc: 'Add a new student in under a minute. Duplicate roll numbers in the same class are rejected automatically.' },
+  { icon: IndianRupee, title: 'Fees', desc: 'Collect fees month by month, share the receipt on WhatsApp, and verify payments parents made online.' },
   { icon: WifiOff, title: 'Works offline', desc: 'Lost signal mid-period? Keep entering marks. Everything uploads by itself the moment the connection comes back.' },
   { icon: ShieldCheck, title: 'Your own login', desc: 'Each teacher has their own email and password. No shared PIN, and the record shows who entered what.' },
 ];
@@ -56,14 +57,15 @@ export default function FacultyAppPage() {
   const version = info?.version || '1.0.0';
   const size = info?.sizeMB ? `${info.sizeMB} MB` : '≈4 MB';
   const href = info?.file || '/downloads/AshaDeepFaculty.apk';
+  const win = info?.windows;
 
   return (
     <>
       <PageHeader
         icon={Smartphone}
         eyebrow="For teaching staff"
-        title="The Asha Deep Faculty app"
-        lead="An Android app for teachers — enter marks, enrol students and manage the register from your phone, even where the signal is poor. Parents do not need this; results and fees are open to everyone on this website."
+        title="The Asha Deep staff apps"
+        lead="For teachers and the office — enter marks, enrol students, collect fees and manage the register from an Android phone or a Windows computer. Parents do not need these; results and fees are open to everyone on this website."
       >
         <div className="flex flex-wrap gap-2">
           <Badge tone="garden" icon={ShieldCheck}>Staff accounts only</Badge>
@@ -83,14 +85,14 @@ export default function FacultyAppPage() {
                   Download version {version}
                 </h2>
                 <p className="lead text-sm mt-2.5">
-                  For Android phones and tablets. Released {info?.releasedOn
+                  <Smartphone className="w-4 h-4 inline -mt-0.5 mr-1" />For Android phones and tablets. Released {info?.releasedOn
                     ? new Date(info.releasedOn).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
                     : 'October 2026'} · {size}
                 </p>
 
                 <div className="flex flex-wrap gap-3 mt-6">
                   <a href={href} download className="btn-primary">
-                    <Download className="w-4 h-4" /> Download the app
+                    <Download className="w-4 h-4" /> Download for Android
                   </a>
                   <a href="#how-to-install" className="btn-ghost">
                     How to install <ArrowRight className="w-4 h-4" />
@@ -118,6 +120,45 @@ export default function FacultyAppPage() {
                   </div>
                   {/* speaker notch */}
                   <span className="absolute top-3.5 left-1/2 -translate-x-1/2 w-10 h-1 rounded-full bg-ink-700" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </Reveal>
+
+        {/* ---------- Windows ---------- */}
+        <Reveal>
+          <div className="panel p-7 sm:p-9 mt-6">
+            <div className="grid grid-cols-1 sm:grid-cols-12 gap-7 items-center">
+              <div className="sm:col-span-8">
+                <span className="eyebrow"><Monitor className="w-3.5 h-3.5" /> For the office computer</span>
+                <h2 className="font-display text-2xl font-extrabold text-ink-950 mt-3">
+                  Asha Deep Staff for Windows{win?.version ? ` · version ${win.version}` : ''}
+                </h2>
+                <p className="lead text-sm mt-2.5">
+                  The full staff dashboard as a Windows program — fee desk with printed receipts, day book,
+                  defaulters, marks, register and notices on a big screen. Windows 10 or 11 · {win?.sizeMB ? `${win.sizeMB} MB` : '≈80 MB'}
+                </p>
+                <div className="flex flex-wrap gap-3 mt-6">
+                  <a href={win?.file || '#'} className="btn-ink" aria-disabled={!win?.file}>
+                    <Download className="w-4 h-4" /> Download for Windows
+                  </a>
+                </div>
+                <p className="text-[11px] text-ink-faint mt-4 leading-relaxed max-w-lg">
+                  Run the downloaded <strong>AshaDeepStaff-Setup.exe</strong>. Windows may show “Windows protected your PC”
+                  because the program is new and not yet code-signed — click <strong>More info → Run anyway</strong>.
+                  It then installs with a desktop shortcut. Sign in with the same email and password as the website.
+                </p>
+              </div>
+              <div className="sm:col-span-4 flex justify-center">
+                <div className="w-56 rounded-2xl bg-ink-950 p-2 shadow-float">
+                  <div className="h-32 rounded-xl bg-gradient-to-b from-ink-900 to-ink-950 flex flex-col items-center justify-center gap-2">
+                    <span className="w-11 h-11 rounded-2xl bg-gradient-to-br from-brass-400 to-brass-600 flex items-center justify-center shadow-brass">
+                      <Printer className="w-5 h-5 text-ink-950" strokeWidth={2.3} />
+                    </span>
+                    <p className="text-[9px] font-extrabold tracking-[.2em] text-brass-400">STAFF · WINDOWS</p>
+                  </div>
+                  <div className="h-2 w-16 mx-auto mt-2 rounded-full bg-ink-700" />
                 </div>
               </div>
             </div>
