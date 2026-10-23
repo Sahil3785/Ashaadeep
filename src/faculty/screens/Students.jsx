@@ -1,11 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import {
-  Users, Search, Phone, Trash2, Pencil, X, Save, Filter, ChevronRight, MessageCircle,
+  Users, Search, Phone, Trash2, Pencil, X, Save, Filter, ChevronRight, MessageCircle, UserPlus,
 } from 'lucide-react';
 import { CLASS_LIST } from '../../data/school';
 import { useSchool } from '../../context/SchoolContext';
 import { Screen, Card, Field, Btn, Pill, Sheet, Empty, inputCls, selectCls } from '../components/Chrome';
-import { initialsOf } from '../../utils/format';
+import { initialsOf, numeric, NAME_INPUT } from '../../utils/format';
 import { tap } from '../native';
 
 /* ============================================================
@@ -16,7 +16,7 @@ import { tap } from '../native';
    sheet with that student's full details and the actions:
    toggle the fee, call the guardian, edit, or remove.
    ============================================================ */
-export default function Students() {
+export default function Students({ onGo }) {
   const { students, marks, toggleFee, deleteStudent, updateStudent } = useSchool();
   const [query, setQuery] = useState('');
   const [cls, setCls] = useState('ALL');
@@ -39,7 +39,13 @@ export default function Students() {
   const current = open ? students.find(s => s.student_id === open) : null;
 
   return (
-    <Screen icon={Users} title="Student Register" subtitle={`${students.length} students on roll`}>
+    <Screen icon={Users} title="Student Register" subtitle={`${students.length} students on roll`}
+            action={onGo && (
+              <button onClick={() => { tap(); onGo('enrol'); }} aria-label="Enrol a new student"
+                      className="h-9 px-3 rounded-xl bg-brass-400 text-ink-950 text-[12.5px] font-extrabold flex items-center gap-1.5 active:scale-95 transition-transform">
+                <UserPlus className="w-4 h-4" /> Enrol
+              </button>
+            )}>
       {/* search + filters */}
       <Card className="p-3 space-y-2.5">
         <div className="relative">
@@ -227,7 +233,7 @@ function EditSheet({ student, onClose, onSave }) {
       }} className="space-y-3.5">
         <div className="grid grid-cols-2 gap-3">
           <Field label="Roll number">
-            <input value={d.roll_no || ''} onChange={set('roll_no')} inputMode="numeric" className={inputCls()} />
+            <input value={d.roll_no || ''} onChange={numeric(set('roll_no'))} inputMode="numeric" className={inputCls()} />
           </Field>
           <Field label="Class">
             <select value={d.class || '10TH'} onChange={set('class')} className={selectCls()}>
@@ -237,8 +243,8 @@ function EditSheet({ student, onClose, onSave }) {
         </div>
 
         <Field label="Full name">
-          <input value={d.name || ''}
-                 onChange={e => setD(x => ({ ...x, name: e.target.value.toUpperCase() }))}
+          <input value={d.name || ''} {...NAME_INPUT}
+                 onChange={e => setD(x => ({ ...x, name: e.target.value }))}
                  className={`${inputCls()} uppercase font-bold`} />
         </Field>
 

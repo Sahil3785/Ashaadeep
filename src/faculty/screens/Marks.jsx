@@ -5,7 +5,7 @@ import { summarise } from '../../data/syllabus';
 import { useSchool } from '../../context/SchoolContext';
 import { Screen, Card, Field, Btn, Pill, inputCls, selectCls, Empty } from '../components/Chrome';
 import { tap } from '../native';
-import { initialsOf } from '../../utils/format';
+import { initialsOf, numeric } from '../../utils/format';
 
 /* ============================================================
    Marks — record one subject's marks for one student and term.
@@ -124,12 +124,12 @@ export default function Marks() {
           <p className="text-[11px] font-extrabold uppercase tracking-[.14em] text-ink-faint">Theory</p>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Maximum" error={errors.theoryMax}>
-              <input type="number" inputMode="numeric" min="0" value={f.theoryMax}
-                     onChange={set('theoryMax')} className={inputCls(errors.theoryMax)} />
+              <input type="text" inputMode="decimal" autoComplete="off" value={f.theoryMax}
+                     onChange={numeric(set('theoryMax'), { decimal: true })} className={inputCls(errors.theoryMax)} />
             </Field>
             <Field label="Obtained" required error={errors.theoryObt}>
-              <input type="number" inputMode="numeric" min="0" value={f.theoryObt}
-                     onChange={set('theoryObt')} placeholder="28"
+              <input type="text" inputMode="decimal" autoComplete="off" value={f.theoryObt}
+                     onChange={numeric(set('theoryObt'), { decimal: true })} placeholder="28"
                      className={`${inputCls(errors.theoryObt)} font-bold`} />
             </Field>
           </div>
@@ -140,12 +140,12 @@ export default function Marks() {
           <p className="text-[11px] font-extrabold uppercase tracking-[.14em] text-ink-faint pt-1">Internal / practical</p>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Maximum" error={errors.practMax}>
-              <input type="number" inputMode="numeric" min="0" value={f.practMax}
-                     onChange={set('practMax')} className={inputCls(errors.practMax)} />
+              <input type="text" inputMode="decimal" autoComplete="off" value={f.practMax}
+                     onChange={numeric(set('practMax'), { decimal: true })} className={inputCls(errors.practMax)} />
             </Field>
             <Field label="Obtained" required error={errors.practObt}>
-              <input type="number" inputMode="numeric" min="0" value={f.practObt}
-                     onChange={set('practObt')} placeholder="9"
+              <input type="text" inputMode="decimal" autoComplete="off" value={f.practObt}
+                     onChange={numeric(set('practObt'), { decimal: true })} placeholder="9"
                      className={`${inputCls(errors.practObt)} font-bold`} />
             </Field>
           </div>

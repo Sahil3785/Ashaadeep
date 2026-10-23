@@ -167,25 +167,6 @@ export const publicApi = {
     return data;
   },
 
-  async recordPayment(payment) {
-    if (!isConfigured) return { ok: false, reason: 'not_configured' };
-    const { error } = await supabase.from('fee_payments').insert({
-      student_name: payment.name,
-      roll_no: payment.roll,
-      class: payment.cls,
-      category: payment.category,
-      amount: Number(payment.amount),
-      txn_ref: payment.txn,
-      contact: payment.phone || null,
-      source: 'portal',
-    });
-    if (error) throw new Error(friendlyError(error));
-
-    // Dues are not cleared here: with no gateway confirming the payment, the
-    // office verifies it against the bank statement and marks the student PAID.
-    return { ok: true };
-  },
-
   async submitEnquiry(e) {
     if (!isConfigured) return { ok: false, reason: 'not_configured' };
     const { error } = await supabase.from('enquiries').insert({
@@ -260,6 +241,16 @@ export const staffApi = {
     const mapped = data.map(fromStudentRow);
     writeCache(CACHE.students, mapped);
     return mapped;
+  },
+
+  async getStudent(id) {
+    if (!isConfigured) return null;
+    const { data, error } = await supabase.from('students').select('*').eq('id', id).maybeSingle();
+    if (error) {
+      if (isNetworkError(error)) return null;
+      throw new Error(friendlyError(error));
+    }
+    return data ? fromStudentRow(data) : null;
   },
 
   async listMarks() {
@@ -407,20 +398,6 @@ export const staffApi = {
     const { error } = await supabase.from('enquiries').update({ status }).eq('id', id);
     if (error && !isNetworkError(error)) throw new Error(friendlyError(error));
   },
-
-  async listPayments() {
-    if (!isConfigured) return [];
-    const { data, error } = await supabase
-      .from('fee_payments')
-      .select('*')
-      .order('paid_at', { ascending: false })
-      .limit(200);
-    if (error) {
-      if (isNetworkError(error)) return [];
-      throw new Error(friendlyError(error));
-    }
-    return data;
-  },
 };
 
 /* ============================================================
@@ -430,34 +407,6 @@ export const staffApi = {
    OFFICE — fees, enquiries, notices (any signed-in staff)
    ============================================================ */
 export const officeApi = {
-  /* Clear a student's dues once a payment has been checked against the bank. */
-  async settleFee(payment) {
-    const { data, error } = await supabase.rpc('settle_fee', {
-      p_roll: String(payment.roll_no || '').trim(),
-      p_class: String(payment.class || '').trim(),
-      p_txn: payment.txn_ref,
-    });
-    if (error) throw new Error(friendlyError(error));
-    return data;
-  },
-
-  /* Cash or cheque taken at the office counter. */
-  async recordCounterPayment(p) {
-    const txn = `OFF-${Date.now().toString(36).toUpperCase()}`;
-    const { error } = await supabase.from('fee_payments').insert({
-      student_name: p.name.trim(),
-      roll_no: String(p.roll).trim(),
-      class: p.cls,
-      category: p.category || 'Tuition fee',
-      amount: Number(p.amount),
-      txn_ref: txn,
-      contact: p.phone || null,
-      source: 'counter',
-    });
-    if (error) throw new Error(friendlyError(error));
-    return officeApi.settleFee({ roll_no: p.roll, class: p.cls, txn_ref: txn });
-  },
-
   async listNotices() {
     const { data, error } = await supabase
       .from('notices').select('*').order('publish_date', { ascending: false }).limit(200);
@@ -573,3 +522,154 @@ export const sync = {
 };
 
 export { isConfigured };
+
+/* ============================================================
+   FEES — the month-wise ledger (006_fee_ledger.sql).
+   Same names and shapes as the demo engine in feesLocal.js;
+   screens reach both through `fees` in lib/fees.js.
+   Every write is a database function that checks the caller.
+   ============================================================ */
+const rpc = async (name, args) => {
+  const { data, error } = await supabase.rpc(name, args);
+  if (error) throw new Error(friendlyError(error));
+  return data;
+};
+const rows = async (query) => {
+  const { data, error } = await query;
+  if (error) throw new Error(friendlyError(error));
+  return data || [];
+};
+const n2 = (v) => Math.round((Number(v) || 0) * 100) / 100;
+const fromLine = (l) => ({
+  ...l, period: String(l.period).slice(0, 10), due_date: String(l.due_date).slice(0, 10),
+  amount: n2(l.amount), concession: n2(l.concession), net: n2(l.net), paid: n2(l.paid), balance: n2(l.balance),
+});
+const fromPayment = (p) => ({
+  ...p, amount: n2(p.amount), periods: (p.periods || []).map(d => String(d).slice(0, 10)),
+  paid_on: p.paid_on ? String(p.paid_on).slice(0, 10) : String(p.paid_at || '').slice(0, 10),
+});
+
+export const feesRemote = {
+  async getSetup() {
+    const [sessions, heads] = await Promise.all([
+      rows(supabase.from('fee_sessions').select('*').eq('is_current', true).limit(1)),
+      rows(supabase.from('fee_heads').select('*').order('sort')),
+    ]);
+    const session = sessions[0] ? {
+      ...sessions[0], starts_on: String(sessions[0].starts_on).slice(0, 10),
+      billing_from: sessions[0].billing_from ? String(sessions[0].billing_from).slice(0, 10) : null,
+    } : null;
+    const rates = session
+      ? (await rows(supabase.from('fee_rates').select('class, head_id, amount').eq('session', session.id))).map(r => ({ ...r, amount: n2(r.amount) }))
+      : [];
+    return { session, heads, rates };
+  },
+
+  saveSetup: ({ id, starts_on, due_day, billing_from, rates, generate }) =>
+    rpc('save_fee_setup', {
+      p_session: id, p_starts_on: starts_on, p_due_day: Number(due_day) || 10,
+      p_billing_from: billing_from || starts_on, p_rates: rates || [], p_generate: !!generate,
+    }),
+
+  async saveHead(h) {
+    const row = {
+      name: h.name.trim(), frequency: h.frequency, due_month: Number(h.due_month) || 1,
+      is_optional: !!h.is_optional, sort: Number(h.sort) || 0, is_active: h.is_active !== false,
+    };
+    const q = h.id ? supabase.from('fee_heads').update(row).eq('id', h.id) : supabase.from('fee_heads').insert(row);
+    const { error } = await q;
+    if (error) throw new Error(friendlyError(error));
+    return { ok: true };
+  },
+
+  async getLedger(studentId) {
+    const { session } = await feesRemote.getSetup();
+    if (!session) return { session: null, lines: [], adjustments: [], payments: [] };
+    const [lines, adjustments, payments] = await Promise.all([
+      rows(supabase.from('fee_due_lines').select('*').eq('student_id', studentId).eq('session', session.id)
+        .order('period').order('head_sort')),
+      rows(supabase.from('fee_adjustments').select('*').eq('student_id', studentId).eq('session', session.id)),
+      rows(supabase.from('fee_payments').select('*')
+        .or(`student_id.eq.${studentId},claimed_student_id.eq.${studentId}`)
+        .order('paid_at', { ascending: false }).limit(100)),
+    ]);
+    return { session, lines: lines.map(fromLine), adjustments, payments: payments.map(fromPayment) };
+  },
+
+  collect: ({ studentId, lines, mode, reference, paidOn, note, source }) =>
+    rpc('collect_fee', {
+      p_student: studentId, p_lines: lines.map(l => ({ due_id: l.due_id, amount: l.amount })),
+      p_mode: mode || 'cash', p_reference: reference || null, p_paid_on: paidOn || null,
+      p_note: note || null, p_source: source || 'counter',
+    }),
+
+  async listPayments({ status = 'all', from, to, q, limit = 200 } = {}) {
+    let query = supabase.from('fee_payments').select('*').order('paid_at', { ascending: false }).limit(limit);
+    if (status !== 'all') query = query.eq('status', status);
+    if (from) query = query.gte('paid_on', from);
+    if (to) query = query.lte('paid_on', to);
+    const s = (q || '').trim().replace(/[%_,()]/g, '');
+    if (s) query = query.or(`student_name.ilike.%${s}%,receipt_no.ilike.%${s}%,utr.ilike.%${s}%,roll_no.eq.${s}`);
+    return (await rows(query)).map(fromPayment);
+  },
+
+  async getPayment(id) {
+    const [payment] = await rows(supabase.from('fee_payments').select('*').eq('id', id).limit(1));
+    if (!payment) throw new Error('Receipt not found.');
+    const items = await rows(supabase.from('fee_allocations')
+      .select('amount, fee_dues(period, fee_heads(name))').eq('payment_id', id));
+    return {
+      payment: fromPayment(payment),
+      items: items.map(i => ({ period: String(i.fee_dues?.period || '').slice(0, 10), head_name: i.fee_dues?.fee_heads?.name || 'Fee', amount: n2(i.amount) }))
+        .sort((a, b) => a.period.localeCompare(b.period)),
+    };
+  },
+
+  verify: (paymentId, studentId, lines) =>
+    rpc('verify_fee_payment', { p_payment: paymentId, p_student: studentId,
+      p_lines: lines.map(l => ({ due_id: l.due_id, amount: l.amount })) }),
+  reject: (paymentId, reason) => rpc('reject_fee_payment', { p_payment: paymentId, p_reason: reason }),
+  cancel: (paymentId, reason) => rpc('cancel_fee_receipt', { p_payment: paymentId, p_reason: reason }),
+
+  updateDue: (dueId, { amount = null, concession = null, waived = null, note = null } = {}) =>
+    rpc('update_fee_due', { p_due: dueId, p_amount: amount, p_concession: concession, p_waived: waived, p_note: note }),
+  addDue: ({ studentId, period, headId, amount, note }) =>
+    rpc('add_fee_due', { p_student: studentId, p_period: period, p_head: headId, p_amount: Number(amount), p_note: note || null }),
+  setAdjustment: ({ studentId, headId, opted = true, amountOverride = null, concessionPct = 0, concessionFlat = 0, reason = '' }) =>
+    rpc('set_fee_adjustment', {
+      p_student: studentId, p_head: headId, p_opted: opted,
+      p_amount_override: amountOverride === '' || amountOverride == null ? null : Number(amountOverride),
+      p_concession_pct: Number(concessionPct) || 0, p_concession_flat: Number(concessionFlat) || 0, p_reason: reason || null,
+    }),
+
+  classSummary: async (upto) => (await rpc('fee_class_summary', upto ? { p_upto: upto } : {})) || [],
+  defaulters: async ({ cls = null, upto } = {}) =>
+    ((await rpc('fee_defaulters', { p_class: cls, ...(upto ? { p_upto: upto } : {}) })) || [])
+      .map(d => ({ ...d, amount: n2(d.amount), months: (d.months || []).map(m => String(m).slice(0, 10)) })),
+  collectionSummary: (from, to) => rpc('fee_collection_summary', { p_from: from, p_to: to }),
+  refreshAllStatus: () => rpc('refresh_fee_status'),
+  markManual: async () => {},   // the database trigger records this itself
+
+  /* Parents. The database returns one card per month; spread it back into
+     lines so both engines hand the screens the same shape. */
+  async statement(roll, cls, name) {
+    const res = await rpc('get_fee_statement', { p_roll: String(roll).trim(), p_class: cls, p_name: String(name).trim() });
+    if (res?.status !== 'success') return res || { status: 'not_found' };
+    const lines = [];
+    for (const m of res.months || []) {
+      (m.heads || []).forEach((h, i) => lines.push({
+        id: `${m.period}-${i}`, period: String(m.period).slice(0, 10), due_date: String(m.due_date).slice(0, 10),
+        head_name: h.head, head_sort: i, net: n2(h.net), balance: n2(h.balance),
+        paid: m.waived ? 0 : n2(Number(h.net) - Number(h.balance)), waived: !!m.waived,
+      }));
+    }
+    return { status: 'success', session: res.session, student: res.student, lines,
+             awaiting: (res.months || []).filter(m => m.awaiting).map(m => String(m.period).slice(0, 10)) };
+  },
+
+  submitOnline: ({ roll, cls, name, periods, amount, utr, phone, category }) =>
+    rpc('submit_fee_payment', {
+      p_roll: String(roll).trim(), p_class: cls, p_name: String(name).trim(), p_periods: periods || [],
+      p_amount: Number(amount), p_utr: utr, p_phone: phone || null, p_category: category || null,
+    }),
+};

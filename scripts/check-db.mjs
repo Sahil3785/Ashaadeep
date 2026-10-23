@@ -140,6 +140,25 @@ console.log(`\n${C.cyan}5. Result lookup function${C.reset}`);
   }
 }
 
+// ---------- 5b. The fee ledger (006_fee_ledger.sql) ----------
+console.log(`\n${C.cyan}5b. Fee ledger${C.reset}`);
+{
+  const { data, error } = await db.rpc('get_fee_statement', { p_roll: '__none__', p_class: '10TH', p_name: '__none__' });
+  if (error && /function .* does not exist|not find/i.test(error.message)) {
+    bad('Month-wise fee ledger is not installed', 'Run supabase/migrations/006_fee_ledger.sql in the SQL editor.');
+  } else if (error) {
+    bad('get_fee_statement() errored', error.message);
+  } else if (data?.status === 'not_found') {
+    ok('get_fee_statement() works', 'parents can look up their child\'s months');
+  }
+  const { data: dues } = await db.from('fee_dues').select('id').limit(1);
+  if (!dues?.length) ok('Fee dues are NOT readable by the public');
+  else bad('FEE DUES ARE PUBLIC', 'Run 006_fee_ledger.sql again.');
+  const { error: ins } = await db.from('fee_payments').insert({ student_name: 'check-db', amount: 1 });
+  if (ins) ok('The public cannot write payments directly', 'they must go through submit_fee_payment()');
+  else bad('The anonymous key could insert a payment row', 'Run 006_fee_ledger.sql again.');
+}
+
 // ---------- 6. Seed data ----------
 console.log(`\n${C.cyan}6. Data${C.reset}`);
 {

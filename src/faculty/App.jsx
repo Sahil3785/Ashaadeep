@@ -10,6 +10,7 @@ import Marks from './screens/Marks';
 import Students from './screens/Students';
 import Enrol from './screens/Enrol';
 import Settings from './screens/Settings';
+import Fees from './screens/Fees';
 import { initNative, onBackButton } from './native';
 import { popDismiss } from './dismissStack';
 
@@ -52,9 +53,12 @@ function Gate() {
    ============================================================ */
 function Shell() {
   const [tab, setTab] = useState('overview');
+  // A screen can be opened on a particular student (Home → a fee defaulter).
+  const [focus, setFocus] = useState(null);
 
-  const go = useCallback((next) => {
+  const go = useCallback((next, studentId = null) => {
     setTab(next);
+    setFocus(studentId);
     // Each screen scrolls independently; start every one at the top.
     window.scrollTo({ top: 0, behavior: 'instant' });
   }, []);
@@ -80,7 +84,8 @@ function Shell() {
   const screens = {
     overview: <Overview onGo={go} />,
     marks: <Marks />,
-    students: <Students />,
+    fees: <Fees initialStudentId={focus} />,
+    students: <Students onGo={go} />,
     enrol: <Enrol onDone={go} />,
     settings: <Settings />,
   };

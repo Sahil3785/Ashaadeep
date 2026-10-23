@@ -248,11 +248,12 @@ function FeeHold({ student }) {
         <p className="lead text-sm mt-3 max-w-lg mx-auto">
           The result for <strong className="text-ink-950">{student.name}</strong> (Roll #{student.roll_no},
           Class {student.class}-{student.section || 'A'}) is withheld because the fee for this term is outstanding.
-          Pay it through the portal and the marksheet unlocks immediately — no office visit needed.
+          Pay it through the portal; once the office verifies the payment (usually within a working day) the
+          marksheet unlocks — no office visit needed.
         </p>
 
         <div className="flex flex-wrap justify-center gap-3 mt-7">
-          <Link to="/fees" className="btn-garden">
+          <Link to={`/fees?${new URLSearchParams({ roll: student.roll_no, cls: student.class, name: student.name.split(' ')[0] })}`} className="btn-garden">
             <QrCode className="w-4 h-4" /> Pay the fee now
           </Link>
           <a href={`tel:${SCHOOL.phoneRaw}`} className="btn-ghost">

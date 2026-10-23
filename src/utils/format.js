@@ -70,3 +70,51 @@ export const initialsOf = (name = '') =>
 export const isPhone = (v) => /^[6-9]\d{9}$/.test(String(v).replace(/\D/g, ''));
 export const isEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v).trim());
 export const nonEmpty = (v) => String(v ?? '').trim().length > 0;
+
+/* ------------------------------------------------------------
+   Form-input helpers.
+
+   Two habits broke typing on Android phones:
+   • rewriting a field's value on every keystroke (toUpperCase) fights the
+     keyboard's composing text, so Backspace stops erasing or letters double;
+   • type="number" inputs, which some Android WebViews will not let you clear,
+     and which change their value when a mouse wheel scrolls over them.
+
+   So names are stored exactly as typed and shown in capitals with CSS
+   (they are upper-cased when saved), and numbers are plain text boxes with a
+   numeric keypad that simply drop anything that is not a digit.
+   ------------------------------------------------------------ */
+export const digitsOnly = (v, { decimal = false } = {}) => {
+  const s = String(v ?? '').replace(decimal ? /[^\d.]/g : /\D/g, '');
+  return decimal ? s.replace(/(\..*)\./g, '$1') : s;
+};
+
+// Wraps an onChange handler so the value it receives is digits only.
+export const numeric = (handler, opts) => (e) =>
+  handler({ ...e, target: { ...e.target, value: digitsOnly(e.target.value, opts) } });
+
+// Props for a name field: capital-letter keyboard, no autocorrect fighting it.
+export const NAME_INPUT = {
+  autoCapitalize: 'characters', autoCorrect: 'off', autoComplete: 'off', spellCheck: false,
+};
+
+// "Four Thousand Four Hundred Rupees Only" — Indian numbering, for receipts.
+export function rupeesInWords(amount) {
+  const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven',
+                'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+  const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+  const two = (n) => (n < 20 ? ones[n] : `${tens[Math.floor(n / 10)]}${n % 10 ? ' ' + ones[n % 10] : ''}`);
+  const three = (n) => [n >= 100 ? `${ones[Math.floor(n / 100)]} Hundred` : '', two(n % 100)].filter(Boolean).join(' ');
+  const total = Math.round(Number(amount) || 0);
+  if (total === 0) return 'Zero Rupees Only';
+  const parts = [];
+  let n = total;
+  const crore = Math.floor(n / 10000000); n %= 10000000;
+  const lakh = Math.floor(n / 100000); n %= 100000;
+  const thousand = Math.floor(n / 1000); n %= 1000;
+  if (crore) parts.push(`${three(crore)} Crore`);
+  if (lakh) parts.push(`${two(lakh)} Lakh`);
+  if (thousand) parts.push(`${two(thousand)} Thousand`);
+  if (n) parts.push(three(n));
+  return `${parts.join(' ')} Rupees Only`;
+}

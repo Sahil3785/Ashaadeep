@@ -10,9 +10,10 @@ import { useSchool } from '../context/SchoolContext';
 import { PageHeader, Reveal, Badge, Tabs, StatTile, Modal, ProgressBar } from '../components/UI';
 import { SkTable, EmptyState, Spinner } from '../components/Loaders';
 import { useDelay, useAnchorOnChange } from '../hooks';
-import { inr, initialsOf } from '../utils/format';
+import { inr, initialsOf, numeric, NAME_INPUT } from '../utils/format';
 import { adminApi, staffApi } from '../lib/api';
-import { FeesTab, EnquiriesTab, NoticesTab } from './dashboard/OfficeTabs';
+import { EnquiriesTab, NoticesTab } from './dashboard/OfficeTabs';
+import FeesTab from './dashboard/fees/FeesTab';
 import { StaffTab, ActivityTab } from './dashboard/AdminTabs';
 
 export default function FacultyDashboard() {
@@ -28,9 +29,10 @@ export default function FacultyDashboard() {
     { id: 'marks', label: 'Enter marks', icon: PlusCircle },
     { id: 'enroll', label: 'Enrol student', icon: UserPlus },
     { id: 'register', label: 'Register', icon: Users, count: students.length },
+    // The fee desk works in both modes; the demo keeps its ledger on this device.
+    { id: 'fees', label: 'Fees', icon: IndianRupee },
     // Office tools read and write the shared database, so they need it.
     ...(isConfigured ? [
-      { id: 'fees', label: 'Fees', icon: IndianRupee },
       { id: 'enquiries', label: 'Enquiries', icon: ClipboardList },
       { id: 'notices', label: 'Notices', icon: Megaphone },
     ] : []),
@@ -109,13 +111,13 @@ export default function FacultyDashboard() {
    TAB 1 — OVERVIEW
    ============================================================ */
 function Overview({ ready }) {
-  const { stats, students, marks, payments, isConfigured } = useSchool();
+  const { stats, students, marks, feeSummary, isConfigured } = useSchool();
 
   // Connected: the fee total comes from the database, not this browser.
   const [server, setServer] = React.useState(null);
   React.useEffect(() => { if (isConfigured) staffApi.stats().then(setServer, () => {}); }, [isConfigured]);
 
-  const collected = server ? Number(server.collected) || 0 : payments.reduce((a, p) => a + (Number(p.amount) || 0), 0);
+  const collected = Number(feeSummary?.total) || 0;
   const pendingList = students.filter(s => s.fee_status !== 'PAID');
 
   return (
@@ -126,8 +128,8 @@ function Overview({ ready }) {
         <Reveal delay={80}><StatTile icon={CheckCircle2} value={stats.collectionRate} suffix="%" label="Fee collection" note={`${stats.paid} paid · ${stats.pending} pending`} tone="garden" /></Reveal>
         <Reveal delay={160}><StatTile icon={FileSpreadsheet} value={stats.totalMarks} label="Mark entries" note="All terms and subjects" tone="brass" /></Reveal>
         <Reveal delay={240}>{server
-          ? <StatTile icon={IndianRupee} value={server.new_enquiries ?? 0} label="New enquiries" note={`${inr(collected)} fees recorded`} tone="brass" />
-          : <StatTile icon={IndianRupee} value={payments.length} label="Payments logged" note={collected ? `${inr(collected)} total` : 'This browser session'} tone="brass" />}</Reveal>
+          ? <StatTile icon={IndianRupee} value={server.new_enquiries ?? 0} label="New enquiries" note={`${inr(collected)} fees this month`} tone="brass" />
+          : <StatTile icon={IndianRupee} value={feeSummary?.receipts ?? 0} label="Receipts this month" note={`${inr(collected)} collected`} tone="brass" />}</Reveal>
       </div>
 
       {/* class-wise breakdown */}
@@ -327,7 +329,7 @@ function MarksEntry() {
 
               <div>
                 <label htmlFor="tmax" className="field-label">Theory maximum</label>
-                <input id="tmax" type="number" min="0" value={f.theoryMax} onChange={set('theoryMax')}
+                <input id="tmax" type="text" inputMode="decimal" autoComplete="off" value={f.theoryMax} onChange={numeric(set('theoryMax'), { decimal: true })}
                        className={`field ${errors.theoryMax ? 'field-error' : ''}`} />
                 {errors.theoryMax && <Err>{errors.theoryMax}</Err>}
                 <QuickMax values={MAX_PRESETS.theory} current={f.theoryMax} label="Theory maximum"
@@ -336,7 +338,7 @@ function MarksEntry() {
 
               <div>
                 <label htmlFor="tobt" className="field-label">Theory obtained <span className="text-rose-500">*</span></label>
-                <input id="tobt" type="number" min="0" value={f.theoryObt} onChange={set('theoryObt')}
+                <input id="tobt" type="text" inputMode="decimal" autoComplete="off" value={f.theoryObt} onChange={numeric(set('theoryObt'), { decimal: true })}
                        placeholder="e.g. 28"
                        className={`field font-bold ${errors.theoryObt ? 'field-error' : ''}`} />
                 {errors.theoryObt && <Err>{errors.theoryObt}</Err>}
@@ -344,7 +346,7 @@ function MarksEntry() {
 
               <div>
                 <label htmlFor="pmax" className="field-label">Internal / practical maximum</label>
-                <input id="pmax" type="number" min="0" value={f.practMax} onChange={set('practMax')}
+                <input id="pmax" type="text" inputMode="decimal" autoComplete="off" value={f.practMax} onChange={numeric(set('practMax'), { decimal: true })}
                        className={`field ${errors.practMax ? 'field-error' : ''}`} />
                 {errors.practMax && <Err>{errors.practMax}</Err>}
                 <QuickMax values={MAX_PRESETS.internal} current={f.practMax} label="Internal maximum"
@@ -353,7 +355,7 @@ function MarksEntry() {
 
               <div>
                 <label htmlFor="pobt" className="field-label">Internal obtained <span className="text-rose-500">*</span></label>
-                <input id="pobt" type="number" min="0" value={f.practObt} onChange={set('practObt')}
+                <input id="pobt" type="text" inputMode="decimal" autoComplete="off" value={f.practObt} onChange={numeric(set('practObt'), { decimal: true })}
                        placeholder="e.g. 9"
                        className={`field font-bold ${errors.practObt ? 'field-error' : ''}`} />
                 {errors.practObt && <Err>{errors.practObt}</Err>}
@@ -514,7 +516,7 @@ function EnrolStudent() {
 
     setBusy(true);
     await new Promise(r => setTimeout(r, 550));
-    const ok = addStudent({
+    const ok = await addStudent({
       roll_no: String(f.roll).trim(), name: f.name.trim().toUpperCase(),
       class: f.cls, section: f.section, father_name: f.father.trim(),
       mother_name: f.mother.trim(), contact: f.contact.trim(),
@@ -548,7 +550,7 @@ function EnrolStudent() {
 
           <div>
             <label htmlFor="eroll" className="field-label">Roll number <span className="text-rose-500">*</span></label>
-            <input id="eroll" type="number" min="1" value={f.roll} onChange={set('roll')}
+            <input id="eroll" type="text" inputMode="numeric" autoComplete="off" value={f.roll} onChange={numeric(set('roll'))}
                    placeholder="e.g. 15" className={`field ${errors.roll ? 'field-error' : ''}`} />
             {errors.roll && <Err>{errors.roll}</Err>}
           </div>
@@ -560,8 +562,8 @@ function EnrolStudent() {
 
           <div className="sm:col-span-2">
             <label htmlFor="ename" className="field-label">Full name <span className="text-rose-500">*</span></label>
-            <input id="ename" value={f.name}
-                   onChange={e => { setF(x => ({ ...x, name: e.target.value.toUpperCase() })); setErrors(x => ({ ...x, name: undefined })); }}
+            <input id="ename" value={f.name} {...NAME_INPUT}
+                   onChange={e => { setF(x => ({ ...x, name: e.target.value })); setErrors(x => ({ ...x, name: undefined })); }}
                    placeholder="e.g. AARAV SHARMA"
                    className={`field uppercase font-bold ${errors.name ? 'field-error' : ''}`} />
             {errors.name && <Err>{errors.name}</Err>}
@@ -855,7 +857,7 @@ function EditStudentModal({ student, onClose, onSave }) {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="field-label">Roll number</label>
-            <input value={draft.roll_no || ''} onChange={set('roll_no')} className="field" />
+            <input value={draft.roll_no || ''} onChange={numeric(set('roll_no'))} inputMode="numeric" className="field" />
           </div>
           <div>
             <label className="field-label">Class</label>
@@ -865,8 +867,8 @@ function EditStudentModal({ student, onClose, onSave }) {
           </div>
           <div className="sm:col-span-2">
             <label className="field-label">Full name</label>
-            <input value={draft.name || ''}
-                   onChange={e => setDraft(d => ({ ...d, name: e.target.value.toUpperCase() }))}
+            <input value={draft.name || ''} {...NAME_INPUT}
+                   onChange={e => setDraft(d => ({ ...d, name: e.target.value }))}
                    className="field uppercase font-bold" />
           </div>
           <div>

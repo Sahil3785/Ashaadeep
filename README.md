@@ -52,7 +52,7 @@ this is a demonstration build; see section 8 before deploying for real.
 |---|---|---|
 | `/` | Home | Hero, statistics, facilities, principal's note, gallery preview, events, houses, testimonials |
 | `/results` | Results | Search a marksheet by roll number + name, print or export to PDF |
-| `/fees` | Fee payment | Three-step UPI flow: details → QR → printable receipt |
+| `/fees` | Fee payment | Parent sees the child's month-wise dues → ticks months → UPI QR → enters UTR → acknowledgement (office verifies) |
 | `/about` | About | Mission, timeline of milestones, houses, infrastructure |
 | `/academics` | Academics | The four teaching stages, support systems, daily timetable |
 | `/syllabus` | Syllabus | Chapter-wise NCERT blueprint, searchable, per class |
@@ -63,7 +63,7 @@ this is a demonstration build; see section 8 before deploying for real.
 | `/admissions` | Admissions | Four-step process, document list, age criteria, enquiry form |
 | `/contact` | Contact | Contact cards, message form, timings, bus routes, directions |
 | `/faq` | FAQ | Ten common questions in a searchable accordion |
-| `/faculty-dashboard` | Faculty dashboard | **PIN protected.** Overview, marks entry, enrolment, student register |
+| `/faculty-dashboard` | Faculty dashboard | **Sign-in required.** Overview, marks entry, enrolment, student register, and the fee desk (collect month-wise, verify online payments, day book, defaulters, rate setup) |
 | `/app` | Staff app | Download the Android APK, install steps, staff FAQ |
 | `*` | 404 | Shows the attempted path and offers the pages people actually want |
 
@@ -206,15 +206,15 @@ already solved. What remains:
 1. **Replace the placeholder content.** The Unsplash photographs in
    `src/data/school.js`, the sample staff names, and the affiliation and
    school-code numbers are all stand-ins. Swap them for the real ones.
-2. **Point the UPI payment at a real gateway.** The "I have completed the
-   payment" button currently takes the payer's word for it. Wire it to a
-   gateway callback (Razorpay and Cashfree both support UPI) so the bank
-   confirms the transaction, not the parent.
-3. **Fee-payment inserts are open to the public** by design, so the payment
-   page can work without a login. That means a determined person could post
-   junk rows into `fee_payments`. The amount is capped by a database
-   constraint; if it ever becomes a problem, move the insert behind an Edge
-   Function with a rate limit.
+2. **Point the UPI payment at a real gateway.** Online payments are
+   reported by the parent (with the UTR) and verified by the office against
+   the bank statement. A gateway (Razorpay or Cashfree) would let the bank
+   confirm them automatically; the ledger already has the columns and the
+   verification function for it. See [ROADMAP.md](ROADMAP.md).
+3. **Online payment reports are open to the public** by design, so parents
+   need no login. They go through `submit_fee_payment()`, which validates the
+   amount and UTR, refuses a repeated UTR and caps waiting claims per student;
+   none of them clears dues until staff verify it.
 4. **Take backups.** The free plan has none automatically — see DATABASE.md
    section 8.
 

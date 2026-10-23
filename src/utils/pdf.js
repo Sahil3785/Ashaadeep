@@ -67,3 +67,19 @@ export async function celebrate() {
     /* confetti is decoration — never let it break the receipt */
   }
 }
+
+/* Print one element on its own — a receipt from inside a dialog, without the
+   dashboard behind it. Copies the page's styles into a fresh window. */
+export function printElement(elementId, title = 'Print') {
+  const el = document.getElementById(elementId);
+  if (!el) throw new Error('Nothing to print — the document is not on screen.');
+  const w = window.open('', '_blank', 'width=900,height=1000');
+  if (!w) throw new Error('Allow pop-ups for this site to print the receipt.');
+  const styles = [...document.querySelectorAll('link[rel="stylesheet"], style')].map(n => n.outerHTML).join('');
+  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${title}</title>${styles}
+    <style>body{background:#fff;margin:0;padding:16px} @page{size:A4;margin:10mm}</style></head>
+    <body>${el.outerHTML}</body></html>`);
+  w.document.close();
+  // Give the copied stylesheets and fonts a moment to apply.
+  setTimeout(() => { w.focus(); w.print(); }, 450);
+}

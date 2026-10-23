@@ -12,9 +12,9 @@ import { initialsOf, inr } from '../../utils/format';
    owes fees, and shortcuts into the two most common tasks.
    ============================================================ */
 export default function Overview({ onGo }) {
-  const { stats, students, payments, school } = useSchool();
+  const { stats, students, feeSummary, school, isConfigured } = useSchool();
   const pending = students.filter(s => s.fee_status !== 'PAID');
-  const collected = payments.reduce((a, p) => a + (Number(p.amount) || 0), 0);
+  const collected = Number(feeSummary?.total) || 0;
 
   return (
     <Screen
@@ -30,8 +30,8 @@ export default function Overview({ onGo }) {
                  sub={`${stats.paid} paid · ${stats.pending} pending`} tone="garden" />
         <StatBox icon={FileSpreadsheet} value={stats.totalMarks} label="Mark entries"
                  sub="All terms and subjects" tone="brass" />
-        <StatBox icon={IndianRupee} value={payments.length} label="Payments logged"
-                 sub={collected ? `${inr(collected)} total` : 'None yet on this device'} tone="brass" />
+        <StatBox icon={IndianRupee} value={inr(collected)} label="Fees this month"
+                 sub={`${feeSummary?.receipts ?? 0} receipts${feeSummary?.pending ? ` · ${feeSummary.pending} to verify` : ''}`} tone="brass" />
       </div>
 
       {/* shortcuts */}
@@ -84,7 +84,7 @@ export default function Overview({ onGo }) {
       ) : (
         <Card className="divide-y divide-ink-900/6">
           {pending.map(s => (
-            <button key={s.student_id} onClick={() => onGo('students')}
+            <button key={s.student_id} onClick={() => onGo('fees', s.student_id)}
                     className="w-full flex items-center gap-3 px-4 py-3 active:bg-ink-50 transition-colors text-left">
               <span className="w-9 h-9 shrink-0 rounded-xl bg-rose-500 text-white flex items-center justify-center text-[11px] font-extrabold">
                 {initialsOf(s.name)}
@@ -109,8 +109,9 @@ export default function Overview({ onGo }) {
       )}
 
       <p className="text-[11px] text-ink-faint text-center mt-6 leading-relaxed px-2">
-        Everything you save is stored on this device. It does not sync with the website
-        or with other teachers' phones.
+        {isConfigured
+          ? 'Connected to the school database — the website and every teacher see the same records.'
+          : 'Demo mode: everything you save stays on this device and does not sync.'}
       </p>
     </Screen>
   );

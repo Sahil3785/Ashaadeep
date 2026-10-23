@@ -1,12 +1,12 @@
 import React from 'react';
-import { LayoutDashboard, PlusCircle, Users, UserPlus, Settings } from 'lucide-react';
+import { LayoutDashboard, PlusCircle, Users, IndianRupee, Settings } from 'lucide-react';
 import { tap } from '../native';
 
 export const TABS = [
   { id: 'overview', label: 'Home',     icon: LayoutDashboard },
   { id: 'marks',    label: 'Marks',    icon: PlusCircle },
+  { id: 'fees',     label: 'Fees',     icon: IndianRupee },
   { id: 'students', label: 'Students', icon: Users },
-  { id: 'enrol',    label: 'Enrol',    icon: UserPlus },
   { id: 'settings', label: 'More',     icon: Settings },
 ];
 
@@ -23,7 +23,8 @@ export default function BottomNav({ active, onChange }) {
       <div className="flex items-stretch">
         {TABS.map(t => {
           const Icon = t.icon;
-          const on = active === t.id;
+          // Enrolment opens from Students, so keep that tab lit while it is open.
+          const on = active === t.id || (t.id === 'students' && active === 'enrol');
           return (
             <button
               key={t.id}

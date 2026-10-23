@@ -67,6 +67,7 @@ one, press Run, confirm it says Success, then move to the next.
 | 3 | `supabase/migrations/003_seed.sql` | The ten demo students — **skip this** if you are loading the real register |
 | 4 | `supabase/migrations/004_security_hardening.sql` | Closes self-sign-up, self-reactivation, free fee clearing and result guessing |
 | 5 | `supabase/migrations/005_admin_and_activity.sql` | Admin panel functions and the activity log |
+| 6 | `supabase/migrations/006_fee_ledger.sql` | Month-wise fee ledger: fee heads, class rates, dues, receipts, online verification, reports |
 
 All of them are safe to run more than once.
 
@@ -166,7 +167,7 @@ So the public key can read almost nothing.
 
 | Who | Can do |
 |---|---|
-| Anyone (not signed in) | Read published notices and events. Submit an admission enquiry. Record a fee payment. Look up **one** result via a function. |
+| Anyone (not signed in) | Read published notices and events. Submit an admission enquiry. See **one** child's fee months and report a UPI payment (both need roll + class + first name). Look up **one** result via a function. |
 | Signed-in teacher | Read and write the whole register, marks, enquiries and the fee ledger. |
 | Administrator | All of the above, plus delete student records and manage staff. |
 
@@ -188,6 +189,53 @@ Two more safeguards worth knowing:
 - Obtained marks can never exceed the maximum — enforced by a database
   constraint, not just the form, so a malformed request cannot write a
   nonsense marksheet.
+
+---
+
+## 6a. The fee ledger
+
+Fees are kept month by month, the way school accounts software does it:
+
+| Table | Holds |
+|---|---|
+| `fee_sessions` | The academic year (April–March by default), the due day, and the month billing starts from |
+| `fee_heads` | What is charged — tuition (monthly), transport (monthly, opt-in), exam (annual), admission (one-time, opt-in), late fine |
+| `fee_rates` | The rate card: amount per class per head |
+| `fee_adjustments` | Per student: concession (% or ₹), own transport fare, opt-ins |
+| `fee_dues` | One line per student, per month, per head — generated, never typed |
+| `fee_payments` | One row per receipt, with a sequential receipt number (`2026-27/00042`) |
+| `fee_allocations` | Which months each receipt paid, and how much |
+
+**Going live.** Run `006_fee_ledger.sql`. Nothing is billed yet. As the
+principal, open **Dashboard → Fees → Setup**, check the rate card, set
+**Bill from** to the month you start using the system (so earlier months do
+not show as unpaid), then press **Start billing — generate dues**. Arrears
+from before that month can be added per student with **Add charge**.
+
+**How PAID / PENDING works now.** A student is PENDING while any month whose
+due date has passed still has a balance, and PAID otherwise — worked out from
+the ledger, not set by hand. A status set by hand (to release a marksheet
+despite dues) is kept until that student's next payment. To refresh the
+status every morning, enable `pg_cron` and run the line at the bottom of the
+migration; the Fees screen also refreshes it whenever it opens.
+
+**Mistakes are corrected, never erased.** A wrong receipt is *cancelled* with
+a reason: it stays on record, marked cancelled, and its months fall due again.
+A teacher can cancel a receipt they entered within 24 hours; after that only
+the principal can. Changing what a family owes (edit a month, waive it,
+concessions, rates) is principal-only. All of it appears in the activity log.
+
+**Online payments.** Parents look up their child's months on `/fees`, pay by
+UPI and enter the UTR number. That creates a *pending* payment — it clears
+nothing. Staff find the UTR in the bank statement and press **Verify** (the
+months are marked paid and a receipt is issued) or **Reject** with a reason.
+The same UTR cannot be submitted twice. When a payment gateway (Razorpay /
+Cashfree) is added, its webhook calls the same verification, and the
+`gateway` / `gateway_payment_id` columns are already there for it.
+
+The public can no longer insert into `fee_payments` directly; the website
+uses `submit_fee_payment()`, which validates the request. Deploy the new
+website build together with the migration.
 
 ---
 

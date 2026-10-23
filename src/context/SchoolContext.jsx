@@ -4,6 +4,8 @@ import { SEED_STUDENTS, SEED_MARKS } from '../data/academics';
 import { useLocalState } from '../hooks';
 import { makeStudentId, makeMarksId } from '../utils/format';
 import { auth, staffApi, publicApi, sync, isConfigured } from '../lib/api';
+import { fees, bindLocalFees, todayKey } from '../lib/fees';
+import { resetLocalFees } from '../lib/feesLocal';
 
 const SchoolContext = createContext(null);
 
@@ -35,7 +37,9 @@ export function SchoolProvider({ children }) {
   // In CONNECTED mode they are a cache of what the server returned.
   const [students, setStudents] = useLocalState('ada.students.v2', isConfigured ? [] : SEED_STUDENTS);
   const [marks, setMarks] = useLocalState('ada.marks.v2', isConfigured ? [] : SEED_MARKS);
-  const [payments, setPayments] = useLocalState('ada.payments.v2', []);
+  // This month's fee collection, for the dashboard tiles. Comes from the
+  // ledger (database or demo), never from what one browser happened to see.
+  const [feeSummary, setFeeSummary] = useState(null);
   const [enquiries, setEnquiries] = useLocalState('ada.enquiries.v2', []);
 
   // ---------- Session ----------
@@ -76,6 +80,27 @@ export function SchoolProvider({ children }) {
 
   const toastRef = useRef(toast);
   useEffect(() => { toastRef.current = toast; }, [toast]);
+
+  // Demo mode: the fee engine reads the register from here and writes
+  // PAID / PENDING back into it, exactly as the database trigger would.
+  const studentsRef = useRef(students);
+  useEffect(() => { studentsRef.current = students; }, [students]);
+  useEffect(() => {
+    if (isConfigured) return;
+    bindLocalFees({
+      students: () => studentsRef.current,
+      setStatuses: (map) => setStudents(prev => {
+        let changed = false;
+        const next = prev.map(s => {
+          const v = map[idOf(s)];
+          if (!v || v === s.fee_status) return s;
+          changed = true;
+          return { ...s, fee_status: v };
+        });
+        return changed ? next : prev;
+      }),
+    });
+  }, [setStudents]);
 
   // ---------- Watch the connection, and drain the outbox on reconnect ----------
   useEffect(() => {
@@ -152,6 +177,26 @@ export function SchoolProvider({ children }) {
 
   useEffect(() => { if (isTeacher) refresh(); }, [isTeacher, refresh]);
 
+  const refreshFeeSummary = useCallback(async () => {
+    if (!isTeacher) return;
+    const today = todayKey();
+    try { setFeeSummary(await fees.collectionSummary(`${today.slice(0, 7)}-01`, today)); } catch { /* tiles just stay blank */ }
+  }, [isTeacher]);
+
+  useEffect(() => { if (isTeacher) refreshFeeSummary(); }, [isTeacher, refreshFeeSummary]);
+
+  /* After a fee is collected, verified or cancelled: bring that student's
+     PAID / PENDING up to date without reloading the whole register. */
+  const afterFeeChange = useCallback(async (studentId) => {
+    if (isConfigured && studentId) {
+      try {
+        const fresh = await staffApi.getStudent(studentId);
+        if (fresh) setStudents(prev => prev.map(s => (idOf(s) === studentId ? { ...s, ...fresh } : s)));
+      } catch { /* the next full refresh will catch it */ }
+    }
+    refreshFeeSummary();
+  }, [setStudents, refreshFeeSummary]);
+
   // ---------- Auth actions ----------
   const signIn = useCallback(async (email, password) => {
     if (!isConfigured) throw new Error('The app is not connected to a database yet.');
@@ -220,7 +265,9 @@ export function SchoolProvider({ children }) {
   }, [students, setStudents, toast]);
 
   const updateStudent = useCallback(async (studentId, patch) => {
+    const before = students.find(s => idOf(s) === studentId);
     setStudents(prev => prev.map(s => (idOf(s) === studentId ? { ...s, ...patch } : s)));
+    if (patch.fee_status && before && patch.fee_status !== before.fee_status) fees.markManual(studentId).catch(() => {});
     try {
       if (isConfigured) await staffApi.updateStudent(studentId, patch);
       toast('Student record updated.', 'success');
@@ -229,7 +276,7 @@ export function SchoolProvider({ children }) {
       toast(err.message, 'error', 'Update failed');
       refresh();
     }
-  }, [setStudents, toast, refresh]);
+  }, [students, setStudents, toast, refresh]);
 
   const deleteStudent = useCallback(async (studentId) => {
     const victim = students.find(s => idOf(s) === studentId);
@@ -250,6 +297,8 @@ export function SchoolProvider({ children }) {
     if (!current) return;
     const next = current.fee_status === 'PAID' ? 'PENDING' : 'PAID';
     setStudents(prev => prev.map(s => (idOf(s) === studentId ? { ...s, fee_status: next } : s)));
+    // A status set by hand holds until the student's next payment.
+    fees.markManual(studentId).catch(() => {});
     toast(`${current.name} is now marked ${next}.`, next === 'PAID' ? 'success' : 'warning');
     try {
       if (isConfigured) await staffApi.setFeeStatus(studentId, next);
@@ -271,6 +320,7 @@ export function SchoolProvider({ children }) {
     ]);
     if (feeOverride) {
       setStudents(prev => prev.map(s => (idOf(s) === row.student_id ? { ...s, fee_status: feeOverride } : s)));
+      fees.markManual(row.student_id).catch(() => {});
     }
 
     try {
@@ -300,16 +350,6 @@ export function SchoolProvider({ children }) {
   }, [setMarks, toast, refresh]);
 
   // ---------- Public actions ----------
-  const recordPayment = useCallback(async (payment) => {
-    setPayments(prev => [{ ...payment, at: new Date().toISOString() }, ...prev].slice(0, 100));
-    try {
-      if (isConfigured) await publicApi.recordPayment(payment);
-    } catch (err) {
-      // The receipt is already on screen; the office can reconcile from it.
-      console.warn('[fee] could not record the payment:', err.message);
-    }
-  }, [setPayments]);
-
   const submitEnquiry = useCallback(async (data) => {
     setEnquiries(prev => [{ ...data, id: `ENQ-${Date.now()}`, at: new Date().toISOString() }, ...prev].slice(0, 200));
     try {
@@ -325,11 +365,13 @@ export function SchoolProvider({ children }) {
       toast('Connected to the school database — demo data cannot be restored from here.', 'info', 'Not available');
       return;
     }
+    studentsRef.current = SEED_STUDENTS;
     setStudents(SEED_STUDENTS);
     setMarks(SEED_MARKS);
-    setPayments([]);
+    resetLocalFees();
+    refreshFeeSummary();
     toast('All records restored to the original demo data.', 'info', 'Data reset');
-  }, [setStudents, setMarks, setPayments, toast]);
+  }, [setStudents, setMarks, toast, refreshFeeSummary]);
 
   // ---------- Derived figures ----------
   const stats = useMemo(() => {
@@ -364,7 +406,7 @@ export function SchoolProvider({ children }) {
 
   const value = useMemo(() => ({
     school: SCHOOL,
-    students, marks, payments, enquiries, stats,
+    students, marks, feeSummary, enquiries, stats,
 
     // session
     isTeacher, isAdmin, profile, session, authReady, loadingData,
@@ -376,16 +418,18 @@ export function SchoolProvider({ children }) {
 
     // records
     addStudent, updateStudent, deleteStudent, toggleFee,
-    saveMarks, deleteMarks, recordPayment, submitEnquiry, resetDemoData,
+    saveMarks, deleteMarks, submitEnquiry, resetDemoData,
+    refreshFeeSummary, afterFeeChange,
 
     // notifications
     toasts, toast, dismissToast,
   }), [
-    students, marks, payments, enquiries, stats,
+    students, marks, feeSummary, enquiries, stats,
     isTeacher, isAdmin, profile, session, authReady, loadingData, pinModalOpen,
     signIn, verifyPin, signOutTeacher, refresh, online, queued,
     addStudent, updateStudent, deleteStudent, toggleFee,
-    saveMarks, deleteMarks, recordPayment, submitEnquiry, resetDemoData,
+    saveMarks, deleteMarks, submitEnquiry, resetDemoData,
+    refreshFeeSummary, afterFeeChange,
     toasts, toast, dismissToast,
   ]);
 

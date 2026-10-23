@@ -14,7 +14,7 @@ import Admin from './Admin';
    about what this build does and does not do.
    ============================================================ */
 export default function Settings() {
-  const { school, signOutTeacher, resetDemoData, students, marks, payments, toast,
+  const { school, signOutTeacher, resetDemoData, students, marks, feeSummary, toast,
           isConfigured, queuedChanges, profile, online, isAdmin } = useSchool();
   const [confirmReset, setConfirmReset] = useState(false);
   const [confirmOut, setConfirmOut] = useState(false);
@@ -102,7 +102,7 @@ export default function Settings() {
         {[
           ['Students', students.length],
           ['Mark entries', marks.length],
-          ['Payments logged', payments.length],
+          ['Receipts this month', feeSummary?.receipts ?? 0],
         ].map(([k, v]) => (
           <div key={k} className="flex justify-between items-center px-4 py-3">
             <span className="text-[13px] text-ink-soft">{k}</span>

@@ -4,6 +4,7 @@ import { CLASS_LIST } from '../../data/school';
 import { useSchool } from '../../context/SchoolContext';
 import { Screen, Card, Field, Btn, inputCls, selectCls } from '../components/Chrome';
 import { tap } from '../native';
+import { numeric, NAME_INPUT } from '../../utils/format';
 
 /* ============================================================
    Enrol — add a student to the register.
@@ -45,7 +46,7 @@ export default function Enrol({ onDone }) {
 
     setBusy(true);
     await new Promise(r => setTimeout(r, 400));
-    const ok = addStudent({
+    const ok = await addStudent({
       roll_no: String(f.roll).trim(),
       name: f.name.trim().toUpperCase(),
       class: f.cls, section: f.section,
@@ -108,13 +109,13 @@ export default function Enrol({ onDone }) {
           </div>
 
           <Field label="Roll number" required error={errors.roll}>
-            <input type="number" inputMode="numeric" min="1" value={f.roll} onChange={set('roll')}
+            <input type="text" inputMode="numeric" autoComplete="off" value={f.roll} onChange={numeric(set('roll'))}
                    placeholder="15" className={inputCls(errors.roll)} />
           </Field>
 
           <Field label="Full name" required error={errors.name}>
-            <input value={f.name}
-                   onChange={e => { setF(x => ({ ...x, name: e.target.value.toUpperCase() })); setErrors(x => ({ ...x, name: undefined })); }}
+            <input value={f.name} {...NAME_INPUT}
+                   onChange={e => { setF(x => ({ ...x, name: e.target.value })); setErrors(x => ({ ...x, name: undefined })); }}
                    placeholder="AARAV SHARMA"
                    className={`${inputCls(errors.name)} uppercase font-bold`} />
           </Field>
