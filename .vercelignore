@@ -1,5 +1,6 @@
-# The Windows installer is linked from GitHub, not served by the website.
-downloads/
-release/
-dist-desktop/
-android/
+# Desktop and Android build folders the website does not need.
+# Leading slashes matter: without them "downloads/" also matched
+# public/downloads/ and took the APK off the live site.
+/release/
+/dist-desktop/
+/android/
